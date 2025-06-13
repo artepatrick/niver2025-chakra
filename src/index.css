@@ -1,0 +1,213 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #121212;
+  font-family: 'Inter', sans-serif;
+  color: #FFFFFF;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: #FFFFFF;
+  background-color: #121212;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #1DB954;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #1ed760;
+}
+
+h1 {
+  font-size: 2.5em;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+button {
+  border-radius: 500px;
+  border: none;
+  padding: 0.8em 2em;
+  font-size: 1em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: #1DB954;
+  color: #000000;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background-color: #1ed760;
+  transform: scale(1.04);
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.3);
+}
+
+/* Remove light theme as we're going full Spotify dark theme */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #FFFFFF;
+    background-color: #121212;
+  }
+  a:hover {
+    color: #1ed760;
+  }
+  button {
+    background-color: #1DB954;
+  }
+}
+
+/* Spotify-style input fields */
+input {
+  width: 100%;
+  padding: 18px 48px 18px 16px;
+  background-color: #242424;
+  border: none;
+  border-radius: 4px;
+  color: #FFFFFF;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  background-color: #2A2A2A;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
+}
+
+input::placeholder {
+  color: #A7A7A7;
+}
+
+/* Container for input with icon */
+.input-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.input-container input {
+  padding-right: 40px;
+}
+
+.input-container .input-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #A7A7A7;
+  pointer-events: none;
+}
+
+/* Countdown container styles */
+.countdown-container {
+  padding: 2rem;
+  margin: 0 auto;
+  max-width: 900px;
+  width: 100%;
+}
+
+.countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+.countdown-item {
+  background-color: #242424;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.countdown-item:hover {
+  transform: translateY(-4px);
+}
+
+.countdown-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1DB954;
+  margin-bottom: 0.5rem;
+}
+
+.countdown-label {
+  font-size: 0.875rem;
+  color: #A7A7A7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .countdown-container {
+    padding: 1.5rem;
+  }
+
+  .countdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .countdown-item {
+    padding: 1rem;
+  }
+
+  .countdown-number {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .countdown-container {
+    padding: 1rem;
+  }
+
+  .countdown-grid {
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+  }
+
+  .countdown-item {
+    padding: 0.75rem;
+  }
+
+  .countdown-number {
+    font-size: 2rem;
+  }
+}
