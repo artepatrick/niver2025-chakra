@@ -205,12 +205,18 @@ const Dashboard = () => {
         throw new Error('Confirmação não encontrada');
       }
 
+      // Ensure names is an array
+      const namesArray = Array.isArray(currentConfirmation.names) 
+        ? currentConfirmation.names 
+        : currentConfirmation.names.split(',').map(name => name.trim());
+
       const payload = {
         id: id,
-        names: currentConfirmation.names,
+        names: namesArray,
         email: currentConfirmation.email,
         phone: currentConfirmation.phone,
-        status: newStatus
+        status: newStatus,
+        confirmed: newStatus === 'confirmado'
       };
       
       console.log('Payload:', payload);
@@ -244,7 +250,7 @@ const Dashboard = () => {
         
         toast({
           title: 'Status atualizado',
-          description: `Status alterado para: ${responseData.data.updatedRecord.status}`,
+          description: responseData.data.message || `Status alterado para: ${responseData.data.updatedRecord.status}`,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -258,9 +264,19 @@ const Dashboard = () => {
       console.error('Mensagem do erro:', error.message);
       console.error('Stack trace:', error.stack);
       
+      // Handle specific error cases
+      let errorMessage = error.message;
+      if (error.message.includes('email já está cadastrado')) {
+        errorMessage = 'Este email já está cadastrado no sistema';
+      } else if (error.message.includes('Names deve ser um array')) {
+        errorMessage = 'O campo de nomes deve ser preenchido corretamente';
+      } else if (error.message.includes('Status inválido')) {
+        errorMessage = 'Status inválido. Valores permitidos: pendente, confirmado, cancelado';
+      }
+      
       toast({
         title: 'Erro ao atualizar status',
-        description: error.message,
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -274,19 +290,29 @@ const Dashboard = () => {
     console.log('Dados do formulário:', formData);
     
     try {
-      console.log('URL:', `${BASE_URL}/api/niver2025/updatePresenceDetails/${formData.id}`);
+      // Ensure names is an array
+      const namesArray = Array.isArray(formData.names) 
+        ? formData.names 
+        : formData.names.split(',').map(name => name.trim());
+
+      const payload = {
+        id: formData.id,
+        names: namesArray,
+        email: formData.email,
+        phone: formData.phone,
+        status: formData.status,
+        confirmed: formData.status === 'confirmado'
+      };
       
-      const response = await fetch(`${BASE_URL}/api/niver2025/updatePresenceDetails/${formData.id}`, {
+      console.log('URL:', `${BASE_URL}/api/niver2025/updatePresenceDetails`);
+      console.log('Payload:', payload);
+      
+      const response = await fetch(`${BASE_URL}/api/niver2025/updatePresenceDetails`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          names: formData.names,
-          email: formData.email,
-          phone: formData.phone,
-          status: formData.status
-        }),
+        body: JSON.stringify(payload),
       });
       
       console.log('Status da resposta:', response.status);
@@ -300,6 +326,7 @@ const Dashboard = () => {
         onClose();
         toast({
           title: 'Dados atualizados',
+          description: responseData.data.message || 'Dados atualizados com sucesso',
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -313,9 +340,19 @@ const Dashboard = () => {
       console.error('Mensagem do erro:', error.message);
       console.error('Stack trace:', error.stack);
       
+      // Handle specific error cases
+      let errorMessage = error.message;
+      if (error.message.includes('email já está cadastrado')) {
+        errorMessage = 'Este email já está cadastrado no sistema';
+      } else if (error.message.includes('Names deve ser um array')) {
+        errorMessage = 'O campo de nomes deve ser preenchido corretamente';
+      } else if (error.message.includes('Status inválido')) {
+        errorMessage = 'Status inválido. Valores permitidos: pendente, confirmado, cancelado';
+      }
+      
       toast({
         title: 'Erro ao atualizar dados',
-        description: error.message,
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -475,15 +512,17 @@ const Dashboard = () => {
       {/* Edit Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Editar Confirmação</ModalHeader>
-          <ModalCloseButton />
+        <ModalContent bg="gray.800" color="white">
+          <ModalHeader color="white">Editar Confirmação</ModalHeader>
+          <ModalCloseButton color="white" />
           <ModalBody pb={6}>
             {selectedConfirmation && (
               <VStack spacing={4}>
                 <FormControl>
-                  <FormLabel>Nomes</FormLabel>
+                  <FormLabel color="gray.200">Nomes</FormLabel>
                   <Input
+                    bg="gray.700"
+                    color="white"
                     value={selectedConfirmation.names.join(', ')}
                     onChange={(e) =>
                       setSelectedConfirmation({
@@ -494,8 +533,10 @@ const Dashboard = () => {
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel color="gray.200">Email</FormLabel>
                   <Input
+                    bg="gray.700"
+                    color="white"
                     value={selectedConfirmation.email}
                     onChange={(e) =>
                       setSelectedConfirmation({
@@ -506,8 +547,10 @@ const Dashboard = () => {
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel>Telefone</FormLabel>
+                  <FormLabel color="gray.200">Telefone</FormLabel>
                   <Input
+                    bg="gray.700"
+                    color="white"
                     value={selectedConfirmation.phone}
                     onChange={(e) =>
                       setSelectedConfirmation({
@@ -518,8 +561,10 @@ const Dashboard = () => {
                   />
                 </FormControl>
                 <FormControl>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel color="gray.200">Status</FormLabel>
                   <Select
+                    bg="gray.700"
+                    color="white"
                     value={selectedConfirmation.status}
                     onChange={(e) =>
                       setSelectedConfirmation({
