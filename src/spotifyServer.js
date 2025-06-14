@@ -52,5 +52,16 @@ export async function searchSpotify(query, limit = 10) {
     throw new Error("Erro ao buscar músicas no Spotify: " + res.status);
   }
   const data = await res.json();
-  return data.tracks?.items || [];
+
+  // Transforma os resultados para incluir apenas as informações necessárias
+  return (data.tracks?.items || []).map((track) => ({
+    spotify_id: track.id,
+    song_title: track.name,
+    artist: track.artists.map((artist) => artist.name).join(", "),
+    album_name: track.album.name,
+    album_image_url: track.album.images[0]?.url,
+    preview_url: track.preview_url,
+    duration_ms: track.duration_ms,
+    spotify_url: track.external_urls.spotify,
+  }));
 }
