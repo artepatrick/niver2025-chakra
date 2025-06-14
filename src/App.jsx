@@ -31,7 +31,7 @@ import {
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom'
-import PresenceManagement from './pages/PresenceManagement'
+import Dashboard from './pages/dashboard'
 import { searchSpotify } from './spotifyServer'
 
 const EVENT_DATE = new Date('2025-06-28T16:00:00')
@@ -247,7 +247,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/admin" element={<PresenceManagement />} />
+        <Route path="/admin" element={<Dashboard />} />
         <Route path="/" element={
           <Container maxW="container.md" py={8}>
             <VStack spacing={8} bg="gray.700" p={8} borderRadius="xl" boxShadow="xl">

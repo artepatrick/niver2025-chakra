@@ -36,7 +36,7 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
-import { EditIcon, CheckIcon, CloseIcon, SearchIcon, TimeIcon, MusicNoteIcon } from '@chakra-ui/icons';
+import { EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -45,7 +45,6 @@ const EVENT_DATE = new Date('2025-06-28T16:00:00');
 const Dashboard = () => {
   const [confirmations, setConfirmations] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
   const [stats, setStats] = useState({
     total: 0,
     confirmed: 0,
@@ -61,32 +60,20 @@ const Dashboard = () => {
   const [selectedConfirmation, setSelectedConfirmation] = useState(null);
   const toast = useToast();
 
-  // Fetch confirmations
+  // Fetch all confirmations
   const fetchConfirmations = async () => {
-    if (!email) {
-      toast({
-        title: 'Email necessário',
-        description: 'Por favor, insira um email para buscar as confirmações.',
-        status: 'warning',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
     setLoading(true);
     console.log('=== Iniciando fetchConfirmations ===');
     console.log('BASE_URL:', BASE_URL);
-    console.log('URL completa:', `${BASE_URL}/api/niver2025/getPresenceConfirmations`);
+    console.log('URL completa:', `${BASE_URL}/api/niver2025/getAllConfirmations`);
     
     try {
-      console.log('Fazendo requisição POST...');
-      const response = await fetch(`${BASE_URL}/api/niver2025/getPresenceConfirmations`, {
-        method: 'POST',
+      console.log('Fazendo requisição GET...');
+      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
       });
       
       console.log('=== Detalhes da Resposta ===');
@@ -96,17 +83,17 @@ const Dashboard = () => {
       const responseData = await response.json();
       console.log('Resposta:', responseData);
       
-      if (responseData.code === 200 && responseData.data.exists) {
+      if (responseData.code === 200) {
         console.log('Atualizando estado com os dados...');
-        setConfirmations(responseData.data.confirmations);
-        calculateStats(responseData.data.confirmations);
+        setConfirmations(responseData.data);
+        calculateStats(responseData.data);
       } else {
         setConfirmations([]);
         calculateStats([]);
         toast({
-          title: 'Nenhuma confirmação encontrada',
-          description: 'Não foram encontradas confirmações para este email.',
-          status: 'info',
+          title: 'Erro ao carregar dados',
+          description: 'Não foi possível carregar as confirmações.',
+          status: 'error',
           duration: 5000,
           isClosable: true,
         });
@@ -166,6 +153,11 @@ const Dashboard = () => {
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Fetch confirmations on component mount
+  useEffect(() => {
+    fetchConfirmations();
   }, []);
 
   // Update confirmation status
@@ -265,12 +257,6 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleEdit = (confirmation) => {
     setSelectedConfirmation(confirmation);
     onOpen();
@@ -296,85 +282,64 @@ const Dashboard = () => {
       </Link>
       
       {/* Dashboard Header */}
-      <Box mb={8} p={6} bg="white" borderRadius="xl" boxShadow="lg">
-        <Heading mb={6} size="lg">Dashboard de Confirmações</Heading>
+      <Box mb={8} p={6} bg="gray.700" borderRadius="xl" boxShadow="lg">
+        <Heading mb={6} size="lg" color="white">Dashboard de Confirmações</Heading>
         
         {/* Countdown Timer */}
-        <Box mb={8} p={4} bg="brand.50" borderRadius="lg">
+        <Box mb={8} p={4} bg="gray.600" borderRadius="lg">
           <Flex align="center" mb={2}>
             <Icon as={TimeIcon} color="brand.500" mr={2} />
-            <Text fontSize="lg" fontWeight="bold">Contagem Regressiva para o Evento</Text>
+            <Text fontSize="lg" fontWeight="bold" color="white">Contagem Regressiva para o Evento</Text>
           </Flex>
           <SimpleGrid columns={4} spacing={4}>
-            <Box textAlign="center" p={3} bg="white" borderRadius="md" boxShadow="sm">
+            <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
               <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.days}</Text>
-              <Text fontSize="sm" color="gray.600">Dias</Text>
+              <Text fontSize="sm" color="gray.300">Dias</Text>
             </Box>
-            <Box textAlign="center" p={3} bg="white" borderRadius="md" boxShadow="sm">
+            <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
               <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.hours}</Text>
-              <Text fontSize="sm" color="gray.600">Horas</Text>
+              <Text fontSize="sm" color="gray.300">Horas</Text>
             </Box>
-            <Box textAlign="center" p={3} bg="white" borderRadius="md" boxShadow="sm">
+            <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
               <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.minutes}</Text>
-              <Text fontSize="sm" color="gray.600">Minutos</Text>
+              <Text fontSize="sm" color="gray.300">Minutos</Text>
             </Box>
-            <Box textAlign="center" p={3} bg="white" borderRadius="md" boxShadow="sm">
+            <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
               <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.seconds}</Text>
-              <Text fontSize="sm" color="gray.600">Segundos</Text>
+              <Text fontSize="sm" color="gray.300">Segundos</Text>
             </Box>
           </SimpleGrid>
         </Box>
 
         {/* Statistics */}
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-          <Box p={5} bg="white" borderRadius="lg" boxShadow="md">
+          <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
             <Stat>
-              <StatLabel fontSize="lg" color="gray.600">Total de Convidados</StatLabel>
-              <StatNumber fontSize="3xl" color="brand.500">{stats.total}</StatNumber>
+              <StatLabel fontSize="lg" color="gray.200">Total de Convidados</StatLabel>
+              <StatNumber fontSize="3xl" color={stats.total > 0 ? "brand.500" : "gray.400"}>{stats.total}</StatNumber>
             </Stat>
           </Box>
-          <Box p={5} bg="white" borderRadius="lg" boxShadow="md">
+          <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
             <Stat>
-              <StatLabel fontSize="lg" color="gray.600">Confirmados</StatLabel>
-              <StatNumber fontSize="3xl" color="green.500">{stats.confirmed}</StatNumber>
+              <StatLabel fontSize="lg" color="gray.200">Confirmados</StatLabel>
+              <StatNumber fontSize="3xl" color={stats.confirmed > 0 ? "green.500" : "gray.400"}>{stats.confirmed}</StatNumber>
             </Stat>
           </Box>
-          <Box p={5} bg="white" borderRadius="lg" boxShadow="md">
+          <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
             <Stat>
-              <StatLabel fontSize="lg" color="gray.600">Músicas Sugeridas</StatLabel>
-              <StatNumber fontSize="3xl" color="purple.500">{stats.musicSuggestions}</StatNumber>
+              <StatLabel fontSize="lg" color="gray.200">Músicas Sugeridas</StatLabel>
+              <StatNumber fontSize="3xl" color={stats.musicSuggestions > 0 ? "purple.500" : "gray.400"}>{stats.musicSuggestions}</StatNumber>
             </Stat>
           </Box>
         </SimpleGrid>
       </Box>
 
-      {/* Email Search */}
-      <HStack mb={8} spacing={4}>
-        <FormControl>
-          <FormLabel>Email</FormLabel>
-          <Input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Digite o email para buscar confirmações"
-          />
-        </FormControl>
-        <Button
-          colorScheme="blue"
-          leftIcon={<SearchIcon />}
-          onClick={fetchConfirmations}
-          isLoading={loading}
-          mt={8}
-        >
-          Buscar
-        </Button>
-      </HStack>
-
       {/* Table */}
-      <Box overflowX="auto">
+      <Box overflowX="auto" bg="gray.700" borderRadius="xl" boxShadow="lg" p={6}>
         <Table variant="simple">
           <Thead>
             <Tr>
-              <Th>Nome</Th>
+              <Th>Convidados</Th>
               <Th>Email</Th>
               <Th>Telefone</Th>
               <Th>Status</Th>
@@ -382,45 +347,57 @@ const Dashboard = () => {
             </Tr>
           </Thead>
           <Tbody>
-            {confirmations.map((confirmation) => (
-              <Tr key={confirmation.id}>
-                <Td>{confirmation.names.join(', ')}</Td>
-                <Td>{confirmation.email}</Td>
-                <Td>{confirmation.phone}</Td>
-                <Td>
-                  <Badge colorScheme={getStatusColor(confirmation.status)}>
-                    {confirmation.status}
-                  </Badge>
-                </Td>
-                <Td>
-                  <Button
-                    size="sm"
-                    leftIcon={<EditIcon />}
-                    mr={2}
-                    onClick={() => handleEdit(confirmation)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    colorScheme="green"
-                    leftIcon={<CheckIcon />}
-                    mr={2}
-                    onClick={() => updateStatus(confirmation.id, 'confirmado')}
-                  >
-                    Confirmar
-                  </Button>
-                  <Button
-                    size="sm"
-                    colorScheme="red"
-                    leftIcon={<CloseIcon />}
-                    onClick={() => updateStatus(confirmation.id, 'cancelado')}
-                  >
-                    Cancelar
-                  </Button>
+            {confirmations.length > 0 ? (
+              confirmations.map((confirmation) => (
+                <Tr key={confirmation.id}>
+                  <Td>{confirmation.names.join(', ')}</Td>
+                  <Td>{confirmation.email}</Td>
+                  <Td>{confirmation.phone}</Td>
+                  <Td>
+                    <Badge colorScheme={getStatusColor(confirmation.status)}>
+                      {confirmation.status}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    <Button
+                      size="sm"
+                      leftIcon={<EditIcon />}
+                      mr={2}
+                      onClick={() => handleEdit(confirmation)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      colorScheme="green"
+                      leftIcon={<CheckIcon />}
+                      mr={2}
+                      onClick={() => updateStatus(confirmation.id, 'confirmado')}
+                    >
+                      Confirmar
+                    </Button>
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      leftIcon={<CloseIcon />}
+                      onClick={() => updateStatus(confirmation.id, 'cancelado')}
+                    >
+                      Cancelar
+                    </Button>
+                  </Td>
+                </Tr>
+              ))
+            ) : (
+              <Tr>
+                <Td colSpan={5}>
+                  <Box textAlign="center" py={8}>
+                    <Text fontSize="lg" color="gray.500" fontWeight="medium">
+                      {loading ? 'Carregando confirmações...' : 'Nenhuma confirmação encontrada.'}
+                    </Text>
+                  </Box>
                 </Td>
               </Tr>
-            ))}
+            )}
           </Tbody>
         </Table>
       </Box>
