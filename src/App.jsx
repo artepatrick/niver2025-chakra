@@ -254,7 +254,7 @@ function App() {
               {/* Profile Section */}
               <VStack spacing={4}>
                 <Image
-                  src="https://tolky.to/_next/image?url=https%3A%2F%2Fi.postimg.cc%2FT2tQppZB%2Fcarol-comprimida.jpg&w=1920&q=75"
+                  src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
                   alt="Ana Carolina Calazans"
                   borderRadius="full"
                   boxSize="200px"
@@ -268,9 +268,6 @@ function App() {
                 <Text fontSize="xl" color="gray.100">
                   Confirme sua presença
                 </Text>
-                <Link as={RouterLink} to="/admin" color="brand.500" fontSize="sm">
-                  Área Administrativa
-                </Link>
               </VStack>
 
               {/* Countdown Section */}
