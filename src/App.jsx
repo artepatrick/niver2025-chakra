@@ -115,7 +115,6 @@ function App() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { isOpen: isSuccessOpen, onOpen: onSuccessOpen, onClose: onSuccessClose } = useDisclosure()
-  const [existingGuests, setExistingGuests] = useState([])
   const [existingStatus, setExistingStatus] = useState('')
   const [showExistingGuests, setShowExistingGuests] = useState(false)
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
@@ -125,6 +124,8 @@ function App() {
   const [suggestedMusic, setSuggestedMusic] = useState([])
   const [isSearching, setIsSearching] = useState(false)
   const [musicLimitError, setMusicLimitError] = useState(false)
+  const [showFullForm, setShowFullForm] = useState(false)
+  const [initialEmail, setInitialEmail] = useState('')
 
   useEffect(() => {
     const timer = setInterval(updateCountdown, 1000)
@@ -205,7 +206,7 @@ function App() {
         song_title: track.song_title || track.name,
         artist: track.artist || '',
         spotify_url: track.spotify_url || track.spotifyUrl,
-        album_image_url: track.album_image_url || track.image_url,
+        image_url: track.image_url,
         preview_url: track.preview_url || track.previewUrl,
         duration_ms: track.duration_ms || track.duration,
         spotify_id: track.spotify_id || track.id,
@@ -218,47 +219,61 @@ function App() {
   }
 
   const handleRemoveMusic = (trackId) => {
-    setSuggestedMusic(suggestedMusic.filter(music => music.id !== trackId))
+    setSuggestedMusic(suggestedMusic.filter(music => music.spotify_id !== trackId))
     setMusicLimitError(false)
   }
 
-  const checkEmail = async (email) => {
-    if (!email || email.length < 3) return;
-    
-    setIsCheckingEmail(true);
+  const handleInitialEmailSubmit = async (e) => {
+    e.preventDefault()
+    if (!initialEmail || initialEmail.length < 3) return
+
+    setIsCheckingEmail(true)
     try {
       const response = await fetch(`${BASE_URL}/api/niver2025/checkEmail`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
-      });
+        body: JSON.stringify({ email: initialEmail }),
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
-      if (response.ok && data.exists) {
-        setExistingGuests(data.data.names);
-        setExistingStatus(data.data.status);
-        setShowExistingGuests(true);
+      if (response.ok && data.data?.exists) {
+        // Pre-fill form with existing data
+        setEmail(initialEmail)
+        setNames(data.data.names)
+        setPhone(data.data.phone || '')
+        setExistingStatus(data.data.status)
+        setSuggestedMusic(data.data.music_suggestions || [])
       } else {
-        setShowExistingGuests(false);
+        // Set email for new user
+        setEmail(initialEmail)
       }
+      
+      // Show full form in both cases
+      setShowFullForm(true)
     } catch (error) {
-      console.error('Error checking email:', error);
+      console.error('Error checking email:', error)
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao verificar o email. Por favor, tente novamente.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
     } finally {
-      setIsCheckingEmail(false);
+      setIsCheckingEmail(false)
     }
-  };
+  }
 
   const handleEmailChange = (e) => {
     const newEmail = e.target.value;
     setEmail(newEmail);
-    checkEmail(newEmail);
   };
 
   const handleAddExistingGuests = () => {
-    const existingNames = existingGuests.filter(name => !names.includes(name));
+    const existingNames = names.filter(name => !names.includes(name));
     setNames([...names, ...existingNames]);
     setShowExistingGuests(false);
     toast({
@@ -450,6 +465,118 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
     }
   }
 
+  const renderInitialEmailScreen = () => (
+    <VStack spacing={8} bg="#0A0A0A" p={8} borderRadius="xl" boxShadow="xl">
+      {/* Profile Section */}
+      <VStack spacing={4}>
+        <Image
+          src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
+          alt="Ana Carolina Calazans"
+          borderRadius="full"
+          boxSize="200px"
+          objectFit="cover"
+          border="4px solid"
+          borderColor="brand.400"
+        />
+        <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+          Ana Carolina Calazans
+        </Heading>
+        <Text fontSize="2xl" color="white" fontWeight="500">
+          Confirme sua presença
+        </Text>
+      </VStack>
+
+      {/* Countdown Section */}
+      <VStack spacing={4}>
+        <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+          Faltam
+        </Heading>
+        <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
+          <VStack key="days">
+            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+              {countdown.days}
+            </Text>
+            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+              Dias
+            </Text>
+          </VStack>
+          <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+            :
+          </Text>
+          <VStack key="hours">
+            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+              {countdown.hours}
+            </Text>
+            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+              Horas
+            </Text>
+          </VStack>
+          <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+            :
+          </Text>
+          <VStack key="minutes">
+            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+              {countdown.minutes}
+            </Text>
+            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+              Minutos
+            </Text>
+          </VStack>
+          <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+            :
+          </Text>
+          <VStack key="seconds">
+            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+              {countdown.seconds}
+            </Text>
+            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+              Segundos
+            </Text>
+          </VStack>
+        </HStack>
+        <Text fontSize="xl" color="white" fontStyle="italic" fontWeight="500">
+          para o grande dia!
+        </Text>
+      </VStack>
+
+      {/* Initial Email Form */}
+      <Box as="form" w="full" onSubmit={handleInitialEmailSubmit}>
+        <VStack spacing={6}>
+          <FormControl isRequired>
+            <FormLabel fontSize="lg" fontWeight="600" color="white">E-mail</FormLabel>
+            <InputGroup>
+              <Input
+                type="email"
+                value={initialEmail}
+                onChange={(e) => setInitialEmail(e.target.value)}
+                placeholder="seu@email.com"
+              />
+              {isCheckingEmail && (
+                <InputRightElement>
+                  <Spinner size="sm" color="brand.500" />
+                </InputRightElement>
+              )}
+            </InputGroup>
+          </FormControl>
+
+          <Button
+            type="submit"
+            colorScheme="brand"
+            size="lg"
+            height="70px"
+            fontSize="xl"
+            fontWeight="700"
+            isLoading={isCheckingEmail}
+            loadingText="Verificando..."
+            w="full"
+          >
+            Avançar
+          </Button>
+        </VStack>
+      </Box>
+    </VStack>
+  )
+
   return (
     <ChakraProvider theme={theme}>
       <Router>
@@ -457,233 +584,211 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/" element={
             <Container maxW="container.md" py={8}>
-              <VStack spacing={8} bg="#0A0A0A" p={8} borderRadius="xl" boxShadow="xl">
-                {/* Profile Section */}
-                <VStack spacing={4}>
-                  <Image
-                    src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
-                    alt="Ana Carolina Calazans"
-                    borderRadius="full"
-                    boxSize="200px"
-                    objectFit="cover"
-                    border="4px solid"
-                    borderColor="brand.400"
-                  />
-                  <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                    Ana Carolina Calazans
-                  </Heading>
-                  <Text fontSize="2xl" color="white" fontWeight="500">
-                    Confirme sua presença
-                  </Text>
-                </VStack>
-
-                {/* Countdown Section */}
-                <VStack spacing={4}>
-                  <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                    Faltam
-                  </Heading>
-                  <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
-                    <VStack key="days">
-                      <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                        {countdown.days}
-                      </Text>
-                      <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
-                        Dias
-                      </Text>
-                    </VStack>
-                    <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                      :
+              {!showFullForm ? (
+                renderInitialEmailScreen()
+              ) : (
+                <VStack spacing={8} bg="#0A0A0A" p={8} borderRadius="xl" boxShadow="xl">
+                  {/* Profile Section */}
+                  <VStack spacing={4}>
+                    <Image
+                      src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
+                      alt="Ana Carolina Calazans"
+                      borderRadius="full"
+                      boxSize="200px"
+                      objectFit="cover"
+                      border="4px solid"
+                      borderColor="brand.400"
+                    />
+                    <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                      Ana Carolina Calazans
+                    </Heading>
+                    <Text fontSize="2xl" color="white" fontWeight="500">
+                      Confirme sua presença
                     </Text>
-                    <VStack key="hours">
-                      <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                        {countdown.hours}
-                      </Text>
-                      <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
-                        Horas
-                      </Text>
-                    </VStack>
-                    <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                      :
-                    </Text>
-                    <VStack key="minutes">
-                      <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                        {countdown.minutes}
-                      </Text>
-                      <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
-                        Minutos
-                      </Text>
-                    </VStack>
-                    <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                      :
-                    </Text>
-                    <VStack key="seconds">
-                      <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                        {countdown.seconds}
-                      </Text>
-                      <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
-                        Segundos
-                      </Text>
-                    </VStack>
-                  </HStack>
-                  <Text fontSize="xl" color="white" fontStyle="italic" fontWeight="500">
-                    para o grande dia!
-                  </Text>
-                </VStack>
+                  </VStack>
 
-                {/* Form Section */}
-                <Box as="form" w="full" onSubmit={handleSubmit}>
-                  <VStack spacing={6} align="stretch">
-                    {names.map((name, index) => (
-                      <HStack key={index}>
-                        <FormControl isRequired>
-                          <FormLabel fontSize="lg" fontWeight="600" color="white">Nome Completo</FormLabel>
-                          <Input
-                            value={name}
-                            onChange={(e) => handleNameChange(index, e.target.value)}
-                            placeholder="Digite seu nome completo"
-                          />
-                        </FormControl>
-                        {index > 0 && (
-                          <IconButton
-                            icon={<DeleteIcon />}
-                            onClick={() => handleRemoveName(index)}
-                            aria-label="Remover nome"
-                            colorScheme="red"
-                            variant="ghost"
-                            size="lg"
-                          />
-                        )}
-                      </HStack>
-                    ))}
-
-                    <Button
-                      leftIcon={<AddIcon />}
-                      onClick={handleAddName}
-                      variant="ghost"
-                      colorScheme="brand"
-                      alignSelf="flex-start"
-                      size="lg"
-                      fontWeight="600"
-                    >
-                      Adicionar mais um nome
-                    </Button>
-
-                    <FormControl>
-                      <FormLabel fontSize="lg" fontWeight="600" color="white">Telefone</FormLabel>
-                      <Input
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        placeholder="(00) 00000-0000"
-                      />
-                    </FormControl>
-
-                    <FormControl isRequired>
-                      <FormLabel fontSize="lg" fontWeight="600" color="white">E-mail</FormLabel>
-                      <InputGroup>
-                        <Input
-                          type="email"
-                          value={email}
-                          onChange={handleEmailChange}
-                          placeholder="seu@email.com"
-                        />
-                        {isCheckingEmail && (
-                          <InputRightElement>
-                            <Spinner size="sm" color="brand.500" />
-                          </InputRightElement>
-                        )}
-                      </InputGroup>
-                      {showExistingGuests && (
-                        <Box mt={2} p={4} bg="#181818" borderRadius="xl">
-                          <Text mb={2} fontSize="lg" color="white" fontWeight="600">
-                            Encontramos um registro existente com status: <Badge colorScheme={existingStatus === 'confirmado' ? 'green' : existingStatus === 'pendente' ? 'yellow' : 'red'}>{existingStatus}</Badge>
-                          </Text>
-                          <Text mb={2} fontSize="lg" color="white" fontWeight="600">
-                            Convidados registrados:
-                          </Text>
-                          <List mb={2}>
-                            {existingGuests.map((guest, index) => (
-                              <ListItem key={index} fontSize="lg" color="white">
-                                {guest}
-                              </ListItem>
-                            ))}
-                          </List>
-                          <Button
-                            size="lg"
-                            colorScheme="brand"
-                            onClick={handleAddExistingGuests}
-                            leftIcon={<AddIcon />}
-                            fontWeight="600"
-                          >
-                            Adicionar convidados existentes
-                          </Button>
-                        </Box>
-                      )}
-                    </FormControl>
-
-                    <FormControl>
-                      <FormLabel fontSize="lg" fontWeight="600" color="white">Sugerir Músicas</FormLabel>
-                      <Text mb={2} fontSize="lg" color="white">
-                        Escolha suas músicas favoritas e ajude a festa a ser diversa e criativa! (máx. 10)
-                      </Text>
-                      <InputGroup>
-                        <InputLeftElement pointerEvents="none">
-                          <SearchIcon color="white" boxSize="5" />
-                        </InputLeftElement>
-                        <Input
-                          value={musicSearch}
-                          onChange={handleMusicSearch}
-                          placeholder="Busque uma música..."
-                          bg="#181818"
-                          color="white"
-                          isDisabled={suggestedMusic.length >= 10}
-                        />
-                        <InputRightElement>
-                          {isSearching && <Spinner size="sm" color="brand.500" />}
-                        </InputRightElement>
-                      </InputGroup>
-                      {musicLimitError && (
-                        <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
-                          Limite de 10 músicas atingido.
+                  {/* Countdown Section */}
+                  <VStack spacing={4}>
+                    <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                      Faltam
+                    </Heading>
+                    <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
+                      <VStack key="days">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.days}
                         </Text>
-                      )}
-                      {searchResults.length > 0 && (
-                        <Box mt={2} maxH="200px" overflowY="auto" bg="#181818" borderRadius="xl">
-                          {searchResults.map((track) => (
-                            <HStack
-                              key={track.spotify_id}
-                              p={3}
-                              _hover={{ bg: '#282828' }}
-                              cursor="pointer"
-                              onClick={() => handleAddMusic(track)}
-                              spacing={3}
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Dias
+                        </Text>
+                      </VStack>
+                      <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="hours">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.hours}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Horas
+                        </Text>
+                      </VStack>
+                      <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="minutes">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.minutes}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Minutos
+                        </Text>
+                      </VStack>
+                      <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="seconds">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.seconds}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Segundos
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    <Text fontSize="xl" color="white" fontStyle="italic" fontWeight="500">
+                      para o grande dia!
+                    </Text>
+                  </VStack>
+
+                  {/* Form Section */}
+                  <Box as="form" w="full" onSubmit={handleSubmit}>
+                    <VStack spacing={6} align="stretch">
+                      {names.map((name, index) => (
+                        <HStack key={index}>
+                          <FormControl isRequired>
+                            <FormLabel fontSize="lg" fontWeight="600" color="white">Nome Completo</FormLabel>
+                            <Input
+                              value={name}
+                              onChange={(e) => handleNameChange(index, e.target.value)}
+                              placeholder="Digite seu nome completo"
+                            />
+                          </FormControl>
+                          {index > 0 && (
+                            <IconButton
+                              icon={<DeleteIcon />}
+                              onClick={() => handleRemoveName(index)}
+                              aria-label="Remover nome"
+                              colorScheme="red"
+                              variant="ghost"
+                              size="lg"
+                            />
+                          )}
+                        </HStack>
+                      ))}
+
+                      <Button
+                        leftIcon={<AddIcon />}
+                        onClick={handleAddName}
+                        variant="ghost"
+                        colorScheme="brand"
+                        alignSelf="flex-start"
+                        size="lg"
+                        fontWeight="600"
+                      >
+                        Adicionar mais um nome
+                      </Button>
+
+                      <FormControl>
+                        <FormLabel fontSize="lg" fontWeight="600" color="white">Telefone</FormLabel>
+                        <Input
+                          value={phone}
+                          onChange={handlePhoneChange}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </FormControl>
+
+                      <FormControl isRequired>
+                        <FormLabel fontSize="lg" fontWeight="600" color="white">E-mail</FormLabel>
+                        <InputGroup>
+                          <Input
+                            type="email"
+                            value={email}
+                            onChange={handleEmailChange}
+                            placeholder="seu@email.com"
+                          />
+                          {isCheckingEmail && (
+                            <InputRightElement>
+                              <Spinner size="sm" color="brand.500" />
+                            </InputRightElement>
+                          )}
+                        </InputGroup>
+                        {showExistingGuests && (
+                          <Box mt={2} p={4} bg="#181818" borderRadius="xl">
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">
+                              Encontramos um registro existente com status: <Badge colorScheme={existingStatus === 'confirmado' ? 'green' : existingStatus === 'pendente' ? 'yellow' : 'red'}>{existingStatus}</Badge>
+                            </Text>
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">
+                              Convidados registrados:
+                            </Text>
+                            <List mb={2}>
+                              {names.map((guest, index) => (
+                                <ListItem key={index} fontSize="lg" color="white">
+                                  {guest}
+                                </ListItem>
+                              ))}
+                            </List>
+                            <Button
+                              size="lg"
+                              colorScheme="brand"
+                              onClick={handleAddExistingGuests}
+                              leftIcon={<AddIcon />}
+                              fontWeight="600"
                             >
-                              <Image
-                                src={track.album_image_url}
-                                alt={`${track.song_title} album cover`}
-                                boxSize="50px"
-                                borderRadius="md"
-                                objectFit="cover"
-                              />
-                              <VStack align="start" spacing={0} flex={1}>
-                                <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
-                                  {track.song_title}
-                                </Text>
-                                <Text color="gray.300" fontSize="md" noOfLines={1}>
-                                  {track.artist}
-                                </Text>
-                              </VStack>
-                            </HStack>
-                          ))}
-                        </Box>
-                      )}
-                      {suggestedMusic.length > 0 && (
-                        <Box mt={4}>
-                          <Text mb={2} fontSize="lg" color="white" fontWeight="600">Músicas Sugeridas:</Text>
-                          <VStack align="stretch" spacing={2}>
-                            {suggestedMusic.map((track) => (
-                              <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
+                              Adicionar convidados existentes
+                            </Button>
+                          </Box>
+                        )}
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel fontSize="lg" fontWeight="600" color="white">Sugerir Músicas</FormLabel>
+                        <Text mb={2} fontSize="lg" color="white">
+                          Escolha suas músicas favoritas e ajude a festa a ser diversa e criativa! (máx. 10)
+                        </Text>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <SearchIcon color="white" boxSize="5" />
+                          </InputLeftElement>
+                          <Input
+                            value={musicSearch}
+                            onChange={handleMusicSearch}
+                            placeholder="Busque uma música..."
+                            bg="#181818"
+                            color="white"
+                            isDisabled={suggestedMusic.length >= 10}
+                          />
+                          <InputRightElement>
+                            {isSearching && <Spinner size="sm" color="brand.500" />}
+                          </InputRightElement>
+                        </InputGroup>
+                        {musicLimitError && (
+                          <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
+                            Limite de 10 músicas atingido.
+                          </Text>
+                        )}
+                        {searchResults.length > 0 && (
+                          <Box mt={2} maxH="200px" overflowY="auto" bg="#181818" borderRadius="xl">
+                            {searchResults.map((track) => (
+                              <HStack
+                                key={track.spotify_id}
+                                p={3}
+                                _hover={{ bg: '#282828' }}
+                                cursor="pointer"
+                                onClick={() => handleAddMusic(track)}
+                                spacing={3}
+                              >
                                 <Image
-                                  src={track.album_image_url}
+                                  src={track.image_url}
                                   alt={`${track.song_title} album cover`}
                                   boxSize="50px"
                                   borderRadius="md"
@@ -697,36 +802,62 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                                     {track.artist}
                                   </Text>
                                 </VStack>
-                                <IconButton
-                                  icon={<DeleteIcon />}
-                                  size="lg"
-                                  variant="ghost"
-                                  colorScheme="red"
-                                  onClick={() => handleRemoveMusic(track.spotify_id)}
-                                  aria-label="Remover música"
-                                />
                               </HStack>
                             ))}
-                          </VStack>
-                        </Box>
-                      )}
-                    </FormControl>
+                          </Box>
+                        )}
+                        {suggestedMusic.length > 0 && (
+                          <Box mt={4}>
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">Músicas Sugeridas:</Text>
+                            <VStack align="stretch" spacing={2}>
+                              {suggestedMusic.map((track) => (
+                                <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
+                                  <Image
+                                    src={track.image_url}
+                                    alt={`${track.song_title} album cover`}
+                                    boxSize="50px"
+                                    borderRadius="md"
+                                    objectFit="cover"
+                                  />
+                                  <VStack align="start" spacing={0} flex={1}>
+                                    <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
+                                      {track.song_title}
+                                    </Text>
+                                    <Text color="gray.300" fontSize="md" noOfLines={1}>
+                                      {track.artist}
+                                    </Text>
+                                  </VStack>
+                                  <IconButton
+                                    icon={<DeleteIcon />}
+                                    size="lg"
+                                    variant="ghost"
+                                    colorScheme="red"
+                                    onClick={() => handleRemoveMusic(track.spotify_id)}
+                                    aria-label="Remover música"
+                                  />
+                                </HStack>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                      </FormControl>
 
-                    <Button
-                      type="submit"
-                      colorScheme="brand"
-                      size="lg"
-                      height="70px"
-                      fontSize="xl"
-                      fontWeight="700"
-                      isLoading={isLoading}
-                      loadingText="Confirmando..."
-                    >
-                      Confirmar Presença
-                    </Button>
-                  </VStack>
-                </Box>
-              </VStack>
+                      <Button
+                        type="submit"
+                        colorScheme="brand"
+                        size="lg"
+                        height="70px"
+                        fontSize="xl"
+                        fontWeight="700"
+                        isLoading={isLoading}
+                        loadingText="Confirmando..."
+                      >
+                        Confirmar Presença
+                      </Button>
+                    </VStack>
+                  </Box>
+                </VStack>
+              )}
 
               {/* Success Modal */}
               <Modal isOpen={isSuccessOpen} onClose={onSuccessClose}>

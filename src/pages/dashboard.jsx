@@ -46,6 +46,7 @@ import {
 import { useState, useEffect } from 'react';
 import { EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
+import { MdMusicNote } from 'react-icons/md';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
@@ -622,50 +623,47 @@ const Dashboard = () => {
                         p={4}
                         _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
                       >
-                        <HStack spacing={4}>
-                          {music.album_image_url ? (
-                            <Image
-                              src={music.album_image_url}
-                              alt={`Capa do álbum ${music.album_name}`}
-                              boxSize="80px"
-                              objectFit="cover"
-                              borderRadius="md"
-                              fallback={
-                                <Box
-                                  boxSize="80px"
-                                  bg="gray.600"
-                                  borderRadius="md"
-                                  display="flex"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                >
-                                  <Icon as={TimeIcon} boxSize="40px" color="brand.400" />
-                                </Box>
-                              }
-                            />
-                          ) : (
-                            <Box
-                              boxSize="80px"
-                              bg="gray.600"
-                              borderRadius="md"
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="center"
-                              position="relative"
-                              overflow="hidden"
-                            >
-                              <Box
-                                position="absolute"
-                                top="0"
-                                left="0"
-                                right="0"
-                                bottom="0"
-                                bg="linear-gradient(45deg, brand.400 0%, brand.600 100%)"
-                                opacity="0.2"
+                        <HStack spacing={4} align="start">
+                          <Box 
+                            minW="80px" 
+                            h="80px" 
+                            bg="gray.600" 
+                            borderRadius="md" 
+                            overflow="hidden"
+                            position="relative"
+                          >
+                            {music.image_url ? (
+                              <Image
+                                src={music.image_url}
+                                alt={`Capa do álbum ${music.album_name || music.song_title}`}
+                                boxSize="80px"
+                                objectFit="cover"
+                                fallback={
+                                  <Box 
+                                    w="80px" 
+                                    h="80px" 
+                                    bg="gray.600" 
+                                    display="flex" 
+                                    alignItems="center" 
+                                    justifyContent="center"
+                                  >
+                                    <Icon as={TimeIcon} color="brand.400" boxSize={8} />
+                                  </Box>
+                                }
                               />
-                              <Icon as={TimeIcon} boxSize="40px" color="brand.400" />
-                            </Box>
-                          )}
+                            ) : (
+                              <Box 
+                                w="80px" 
+                                h="80px" 
+                                bg="gray.600" 
+                                display="flex" 
+                                alignItems="center" 
+                                justifyContent="center"
+                              >
+                                <Icon as={TimeIcon} color="brand.400" boxSize={8} />
+                              </Box>
+                            )}
+                          </Box>
                           <VStack align="start" spacing={1} flex={1}>
                             <Text fontWeight="bold" color="brand.400" fontSize="lg">
                               {music.song_title}
@@ -688,7 +686,7 @@ const Dashboard = () => {
                               </Link>
                             )}
                             <Text color="gray.400" fontSize="xs">
-                              Sugerido por: {confirmation.names.join(', ')}
+                              Sugerido por: {confirmation.names[0]}
                             </Text>
                           </VStack>
                         </HStack>
@@ -792,48 +790,14 @@ const Dashboard = () => {
                           _hover={{ bg: 'gray.500' }}
                         >
                           <HStack spacing={3}>
-                            {music.album_image_url ? (
+                            {music.image_url && (
                               <Image
-                                src={music.album_image_url}
+                                src={music.image_url}
                                 alt={`Capa do álbum ${music.album_name}`}
                                 boxSize="50px"
                                 objectFit="cover"
                                 borderRadius="md"
-                                fallback={
-                                  <Box
-                                    boxSize="50px"
-                                    bg="gray.600"
-                                    borderRadius="md"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                  >
-                                    <Icon as={TimeIcon} boxSize="25px" color="brand.400" />
-                                  </Box>
-                                }
                               />
-                            ) : (
-                              <Box
-                                boxSize="50px"
-                                bg="gray.600"
-                                borderRadius="md"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                position="relative"
-                                overflow="hidden"
-                              >
-                                <Box
-                                  position="absolute"
-                                  top="0"
-                                  left="0"
-                                  right="0"
-                                  bottom="0"
-                                  bg="linear-gradient(45deg, brand.400 0%, brand.600 100%)"
-                                  opacity="0.2"
-                                />
-                                <Icon as={TimeIcon} boxSize="25px" color="brand.400" />
-                              </Box>
                             )}
                             <VStack align="start" spacing={1}>
                               <Text fontWeight="bold" color="brand.400">{music.song_title}</Text>
