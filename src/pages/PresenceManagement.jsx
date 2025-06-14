@@ -23,6 +23,17 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
+const getErrorMessage = (error) => {
+  if (error.message.includes('email já está cadastrado')) {
+    return 'Este email já está cadastrado no sistema';
+  } else if (error.message.includes('Names deve ser um array')) {
+    return 'O campo de nomes deve ser preenchido corretamente';
+  } else if (error.message.includes('Status inválido')) {
+    return 'Status inválido. Valores permitidos: pendente, confirmado, cancelado';
+  }
+  return error.message;
+};
+
 const PresenceManagement = () => {
   const [confirmations, setConfirmations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,9 +117,12 @@ const PresenceManagement = () => {
         throw new Error(data.message || 'Erro ao atualizar status');
       }
     } catch (error) {
+      // Handle specific error cases
+      const errorMessage = getErrorMessage(error);
+      
       toast({
         title: 'Erro ao atualizar status',
-        description: error.message || 'Não foi possível atualizar o status.',
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,

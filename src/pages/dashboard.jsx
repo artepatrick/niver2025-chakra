@@ -52,6 +52,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     total: 0,
     confirmed: 0,
+    pending: 0,
     musicSuggestions: 0,
   });
   const [countdown, setCountdown] = useState({
@@ -129,8 +130,11 @@ const Dashboard = () => {
     console.log('Dados recebidos:', data);
     
     const stats = {
-      total: data.length,
-      confirmed: data.filter(item => item.status === 'confirmado').length,
+      total: data.reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
+      confirmed: data.filter(item => item.status === 'confirmado')
+        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
+      pending: data.filter(item => item.status === 'pendente' || item.status === 'cancelado')
+        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
       musicSuggestions: data.filter(item => item.musicSuggestion).length,
     };
     
@@ -205,6 +209,18 @@ const Dashboard = () => {
         throw new Error('Confirmação não encontrada');
       }
 
+      // Validate status transition
+      if (newStatus === 'cancelado' && currentConfirmation.status === 'cancelado') {
+        toast({
+          title: 'Ação não permitida',
+          description: 'Esta confirmação já está cancelada.',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
       // Ensure names is an array
       const namesArray = Array.isArray(currentConfirmation.names) 
         ? currentConfirmation.names 
@@ -247,9 +263,16 @@ const Dashboard = () => {
         // Calculate stats using the same updated array
         calculateStats(updatedConfirmations);
         
+        // Show appropriate message based on the new status
+        const statusMessages = {
+          'confirmado': 'Confirmação realizada com sucesso!',
+          'cancelado': 'Presença cancelada com sucesso.',
+          'pendente': 'Status alterado para pendente.'
+        };
+        
         toast({
           title: 'Status atualizado',
-          description: responseData.data.message || `Status alterado para: ${responseData.data.updatedRecord.status}`,
+          description: statusMessages[newStatus] || responseData.data.message,
           status: 'success',
           duration: 3000,
           isClosable: true,
@@ -417,7 +440,7 @@ const Dashboard = () => {
         </Box>
 
         {/* Statistics */}
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
           <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
             <Stat>
               <StatLabel fontSize="lg" color="gray.200">Total de Convidados</StatLabel>
@@ -428,6 +451,12 @@ const Dashboard = () => {
             <Stat>
               <StatLabel fontSize="lg" color="gray.200">Confirmados</StatLabel>
               <StatNumber fontSize="3xl" color={stats.confirmed > 0 ? "green.500" : "gray.400"}>{stats.confirmed}</StatNumber>
+            </Stat>
+          </Box>
+          <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
+            <Stat>
+              <StatLabel fontSize="lg" color="gray.200">Pendentes</StatLabel>
+              <StatNumber fontSize="3xl" color={stats.pending > 0 ? "yellow.500" : "gray.400"}>{stats.pending}</StatNumber>
             </Stat>
           </Box>
           <Box p={5} bg="gray.600" borderRadius="lg" boxShadow="md">
