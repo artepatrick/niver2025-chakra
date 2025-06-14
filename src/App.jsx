@@ -295,8 +295,10 @@ function App() {
   };
 
   const handleAddExistingGuests = () => {
-    const existingNames = names.filter(name => !names.includes(name));
-    setNames([...names, ...existingNames]);
+    // Since names already contains the existing guests from the API response,
+    // we just need to ensure we don't have any empty strings
+    const validNames = names.filter(name => name.trim() !== '');
+    setNames(validNames);
     setShowExistingGuests(false);
     toast({
       title: 'Convidados adicionados',
@@ -489,7 +491,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
       {/* Profile Section */}
       <VStack spacing={4}>
         <Image
-          src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
+          src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
           alt="Ana Carolina Calazans"
           borderRadius="full"
           boxSize="200px"
@@ -610,7 +612,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                   {/* Profile Section */}
                   <VStack spacing={4}>
                     <Image
-                      src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
+                      src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
                       alt="Ana Carolina Calazans"
                       borderRadius="full"
                       boxSize="200px"
