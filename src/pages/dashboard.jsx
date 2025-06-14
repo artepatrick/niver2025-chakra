@@ -39,8 +39,12 @@ import { useState, useEffect } from 'react';
 import { EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8080'
+  : 'https://omnicast-backend.fly.dev');
 const EVENT_DATE = new Date('2025-06-28T16:00:00');
+
+console.log('BASE_URL:', BASE_URL);
 
 const Dashboard = () => {
   const [confirmations, setConfirmations] = useState([]);
@@ -155,8 +159,37 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Add error handling for API connection
+  const checkApiConnection = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/healthy`);
+      console.log('Response:', response);
+      console.log("BASE_URL:", BASE_URL);
+      if (!response.ok) {
+        console.error('API server is not responding correctly');
+        toast({
+          title: 'Erro de conexão',
+          description: 'Não foi possível conectar ao servidor. Verifique se o servidor está rodando.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to connect to API:', error);
+      toast({
+        title: 'Erro de conexão',
+        description: 'Não foi possível conectar ao servidor. Verifique se o servidor está rodando.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   // Fetch confirmations on component mount
   useEffect(() => {
+    checkApiConnection();
     fetchConfirmations();
   }, []);
 
@@ -167,15 +200,25 @@ const Dashboard = () => {
     console.log('Novo status:', newStatus);
     
     try {
+      // First get the current confirmation details
+      const currentConfirmation = confirmations.find(c => c.id === id);
+      if (!currentConfirmation) {
+        throw new Error('Confirmação não encontrada');
+      }
+
       const payload = {
-        status: newStatus,
+        id: id,
+        names: currentConfirmation.names,
+        email: currentConfirmation.email,
+        phone: currentConfirmation.phone,
+        status: newStatus
       };
       
       console.log('Payload:', payload);
-      console.log('URL:', `${BASE_URL}/api/niver2025/presence-confirmations/${id}/status`);
+      console.log('URL:', `${BASE_URL}/api/niver2025/updatePresenceDetails`);
       
-      const response = await fetch(`${BASE_URL}/api/niver2025/presence-confirmations/${id}/status`, {
-        method: 'PUT',
+      const response = await fetch(`${BASE_URL}/api/niver2025/updatePresenceDetails`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -186,15 +229,35 @@ const Dashboard = () => {
       const responseData = await response.json();
       console.log('Resposta:', responseData);
       
-      console.log('Atualizando lista de confirmações...');
-      await fetchConfirmations();
-      
-      toast({
-        title: 'Status atualizado',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      if (responseData.code === 200 && responseData.data.updatedRecord) {
+        console.log('Registro atualizado recebido:', responseData.data.updatedRecord);
+        
+        // Update the local state with the updated record
+        setConfirmations(prevConfirmations => {
+          const updatedConfirmations = prevConfirmations.map(confirmation => 
+            confirmation.id === id ? responseData.data.updatedRecord : confirmation
+          );
+          console.log('Estado atualizado:', updatedConfirmations);
+          return updatedConfirmations;
+        });
+        
+        // Recalculate stats with the updated data
+        const updatedConfirmations = confirmations.map(confirmation => 
+          confirmation.id === id ? responseData.data.updatedRecord : confirmation
+        );
+        console.log('Recalculando estatísticas com:', updatedConfirmations);
+        calculateStats(updatedConfirmations);
+        
+        toast({
+          title: 'Status atualizado',
+          description: `Status alterado para: ${responseData.data.updatedRecord.status}`,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error(responseData.message || 'Erro ao atualizar status');
+      }
     } catch (error) {
       console.error('=== Erro em updateStatus ===');
       console.error('Tipo do erro:', error.name);
@@ -217,30 +280,39 @@ const Dashboard = () => {
     console.log('Dados do formulário:', formData);
     
     try {
-      console.log('URL:', `${BASE_URL}/api/niver2025/presence-confirmations/${formData.id}`);
+      console.log('URL:', `${BASE_URL}/api/niver2025/updatePresenceDetails/${formData.id}`);
       
-      const response = await fetch(`${BASE_URL}/api/niver2025/presence-confirmations/${formData.id}`, {
-        method: 'PUT',
+      const response = await fetch(`${BASE_URL}/api/niver2025/updatePresenceDetails/${formData.id}`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          names: formData.names,
+          email: formData.email,
+          phone: formData.phone,
+          status: formData.status
+        }),
       });
       
       console.log('Status da resposta:', response.status);
       const responseData = await response.json();
       console.log('Resposta:', responseData);
       
-      console.log('Atualizando lista de confirmações...');
-      await fetchConfirmations();
-      
-      onClose();
-      toast({
-        title: 'Dados atualizados',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      if (responseData.code === 200) {
+        console.log('Atualizando lista de confirmações...');
+        await fetchConfirmations();
+        
+        onClose();
+        toast({
+          title: 'Dados atualizados',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error(responseData.message || 'Erro ao atualizar dados');
+      }
     } catch (error) {
       console.error('=== Erro em updateConfirmation ===');
       console.error('Tipo do erro:', error.name);
@@ -291,22 +363,26 @@ const Dashboard = () => {
             <Icon as={TimeIcon} color="brand.500" mr={2} />
             <Text fontSize="lg" fontWeight="bold" color="white">Contagem Regressiva para o Evento</Text>
           </Flex>
-          <SimpleGrid columns={4} spacing={4}>
+          <SimpleGrid 
+            columns={{ base: 2, sm: 4 }} 
+            spacing={4}
+            templateColumns={{ base: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" }}
+          >
             <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.days}</Text>
-              <Text fontSize="sm" color="gray.300">Dias</Text>
+              <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.500">{countdown.days}</Text>
+              <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">Dias</Text>
             </Box>
             <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.hours}</Text>
-              <Text fontSize="sm" color="gray.300">Horas</Text>
+              <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.500">{countdown.hours}</Text>
+              <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">Horas</Text>
             </Box>
             <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.minutes}</Text>
-              <Text fontSize="sm" color="gray.300">Minutos</Text>
+              <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.500">{countdown.minutes}</Text>
+              <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">Minutos</Text>
             </Box>
             <Box textAlign="center" p={3} bg="gray.700" borderRadius="md" boxShadow="sm">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.500">{countdown.seconds}</Text>
-              <Text fontSize="sm" color="gray.300">Segundos</Text>
+              <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.500">{countdown.seconds}</Text>
+              <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">Segundos</Text>
             </Box>
           </SimpleGrid>
         </Box>
