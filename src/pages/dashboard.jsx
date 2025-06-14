@@ -164,7 +164,6 @@ const Dashboard = () => {
     try {
       const response = await fetch(`${BASE_URL}/healthy`);
       console.log('Response:', response);
-      console.log("BASE_URL:", BASE_URL);
       if (!response.ok) {
         console.error('API server is not responding correctly');
         toast({
