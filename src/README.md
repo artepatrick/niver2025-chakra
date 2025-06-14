@@ -181,3 +181,44 @@ Editar
     }
   }
 }
+
+```sql
+create table public.presence_confirmations (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  names jsonb not null default '[]'::jsonb,
+  phone character varying(20) not null,
+  email character varying(255) not null,
+  status character varying(20) not null default 'pendente'::character varying,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint presence_confirmations_pkey primary key (id),
+  constraint unique_email unique (email)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_presence_confirmations_email on public.presence_confirmations using btree (email) TABLESPACE pg_default;
+
+create trigger update_presence_confirmations_updated_at BEFORE
+update on presence_confirmations for EACH row
+execute FUNCTION update_updated_at_column ();
+
+
+
+
+create table public.music_suggestions (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  presence_confirmation_id uuid not null,
+  song_title character varying(255) not null,
+  artist character varying(255) null,
+  spotify_url character varying(512) null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint music_suggestions_pkey primary key (id),
+  constraint fk_music_suggestion_confirmation foreign KEY (presence_confirmation_id) references presence_confirmations (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_music_suggestions_confirmation_id on public.music_suggestions using btree (presence_confirmation_id) TABLESPACE pg_default;
+
+create trigger update_music_suggestions_updated_at BEFORE
+update on music_suggestions for EACH row
+execute FUNCTION update_updated_at_column ();
+```
