@@ -24,10 +24,15 @@ import {
   HStack,
   IconButton,
   Link,
+  InputGroup,
+  InputLeftElement,
+  InputRightElement,
+  Spinner,
 } from '@chakra-ui/react'
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons'
+import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom'
 import PresenceManagement from './pages/PresenceManagement'
+import { searchSpotify } from './spotifyServer'
 
 const EVENT_DATE = new Date('2025-06-28T16:00:00')
 const BASE_URL = 'http://localhost:8080' //'https://omnicast-backend.fly.dev'
@@ -45,6 +50,11 @@ function App() {
   const [existingGuests, setExistingGuests] = useState([])
   const [existingStatus, setExistingStatus] = useState('')
   const toast = useToast()
+  const [musicSearch, setMusicSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [suggestedMusic, setSuggestedMusic] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [musicLimitError, setMusicLimitError] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(updateCountdown, 1000)
@@ -96,6 +106,42 @@ function App() {
     setPhone(value)
   }
 
+  const handleMusicSearch = async (e) => {
+    const value = e.target.value
+    setMusicSearch(value)
+    setMusicLimitError(false)
+    if (value.length < 3) {
+      setSearchResults([])
+      return
+    }
+    setIsSearching(true)
+    try {
+      const tracks = await searchSpotify(value)
+      setSearchResults(tracks)
+    } catch (error) {
+      console.error('Error searching music:', error)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleAddMusic = (track) => {
+    if (suggestedMusic.length >= 10) {
+      setMusicLimitError(true)
+      return
+    }
+    if (!suggestedMusic.some(music => music.id === track.id)) {
+      setSuggestedMusic([...suggestedMusic, track])
+    }
+    setMusicSearch('')
+    setSearchResults([])
+  }
+
+  const handleRemoveMusic = (trackId) => {
+    setSuggestedMusic(suggestedMusic.filter(music => music.id !== trackId))
+    setMusicLimitError(false)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
@@ -141,6 +187,11 @@ function App() {
       email,
       phone: phone.replace(/\D/g, ''),
       names: names.filter(name => name.trim() !== ''),
+      musicSuggestions: suggestedMusic.map(music => ({
+        song_title: music.name,
+        artist: music.artists[0].name,
+        spotify_url: music.external_urls?.spotify || null,
+      })),
     }
 
     const submitResponse = await fetch(`${BASE_URL}/api/niver2025/confirmPresence`, {
@@ -190,6 +241,7 @@ function App() {
     setNames([''])
     setPhone('')
     setEmail('')
+    setSuggestedMusic([])
   }
 
   return (
@@ -202,7 +254,7 @@ function App() {
               {/* Profile Section */}
               <VStack spacing={4}>
                 <Image
-                  src="https://tolky.to/_next/image?url=https%3A%2F%2Fi.postimg.cc%2FT2tQppZB%2Fcarol-comprimida.jpg&w=1920&q=75"
+                  src="https://jpkqterigrjwpyrwmxfj.supabase.co/storage/v1/object/public/foto//Carol%20Image%20800x800.webp"
                   alt="Ana Carolina Calazans"
                   borderRadius="full"
                   boxSize="200px"
@@ -216,9 +268,6 @@ function App() {
                 <Text fontSize="xl" color="gray.100">
                   Confirme sua presença
                 </Text>
-                <Link as={RouterLink} to="/admin" color="brand.500" fontSize="sm">
-                  Área Administrativa
-                </Link>
               </VStack>
 
               {/* Countdown Section */}
@@ -328,6 +377,71 @@ function App() {
                     />
                   </FormControl>
 
+                  <FormControl>
+                    <FormLabel>Sugerir Músicas</FormLabel>
+                    <Text mb={2} fontSize="sm" color="gray.300">
+                      Escolha suas músicas favoritas e ajude a festa a ser diversa e criativa! (máx. 10)
+                    </Text>
+                    <InputGroup>
+                      <InputLeftElement pointerEvents="none">
+                        <SearchIcon color="gray.300" />
+                      </InputLeftElement>
+                      <Input
+                        value={musicSearch}
+                        onChange={handleMusicSearch}
+                        placeholder="Busque uma música..."
+                        bg="gray.600"
+                        color="gray.100"
+                        isDisabled={suggestedMusic.length >= 10}
+                      />
+                      <InputRightElement>
+                        {isSearching && <Spinner size="sm" color="brand.500" />}
+                      </InputRightElement>
+                    </InputGroup>
+                    {musicLimitError && (
+                      <Text color="red.400" fontSize="sm" mt={1}>
+                        Limite de 10 músicas atingido.
+                      </Text>
+                    )}
+                    {searchResults.length > 0 && (
+                      <Box mt={2} maxH="200px" overflowY="auto" bg="gray.600" borderRadius="md">
+                        {searchResults.map((track) => (
+                          <HStack
+                            key={track.id}
+                            p={2}
+                            _hover={{ bg: 'gray.500' }}
+                            cursor="pointer"
+                            onClick={() => handleAddMusic(track)}
+                          >
+                            <Text color="gray.100">{track.name} - {track.artists[0].name}</Text>
+                          </HStack>
+                        ))}
+                      </Box>
+                    )}
+                    {suggestedMusic.length > 0 && (
+                      <Box mt={4}>
+                        <Text mb={2} fontSize="sm" color="gray.300">Músicas Sugeridas:</Text>
+                        <VStack align="stretch" spacing={2}>
+                          {suggestedMusic.map((track) => (
+                            <HStack key={track.id} bg="gray.600" p={2} borderRadius="md">
+                              <Text color="gray.100" flex={1}>
+                                {track.name} - {track.artists[0].name}
+                              </Text>
+                              <IconButton
+                                icon={<DeleteIcon />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={() => handleRemoveMusic(track.id)}
+                                aria-label="Remover música"
+                              />
+                            </HStack>
+                          ))}
+                        </VStack>
+                      </Box>
+                    )}
+                  </FormControl>
+
                   <Button
                     type="submit"
                     colorScheme="brand"
@@ -344,9 +458,9 @@ function App() {
             {/* Confirmation Modal */}
             <Modal isOpen={isConfirmOpen} onClose={onConfirmClose}>
               <ModalOverlay />
-              <ModalContent>
-                <ModalHeader>Confirmação de Presença</ModalHeader>
-                <ModalCloseButton />
+              <ModalContent bg="gray.700" color="gray.100">
+                <ModalHeader color="brand.500">Confirmação de Presença</ModalHeader>
+                <ModalCloseButton color="gray.100" />
                 <ModalBody>
                   <Text mb={4}>
                     Já existe um registro para este email com status: <strong>{existingStatus}</strong>
@@ -366,7 +480,7 @@ function App() {
                   <Text>Deseja adicionar os novos convidados ao registro existente?</Text>
                 </ModalBody>
                 <ModalFooter>
-                  <Button variant="ghost" mr={3} onClick={onConfirmClose}>
+                  <Button variant="ghost" mr={3} onClick={onConfirmClose} color="gray.100">
                     Não, editar
                   </Button>
                   <Button
@@ -385,9 +499,9 @@ function App() {
             {/* Success Modal */}
             <Modal isOpen={isSuccessOpen} onClose={onSuccessClose}>
               <ModalOverlay />
-              <ModalContent>
-                <ModalHeader>Presença Confirmada!</ModalHeader>
-                <ModalCloseButton />
+              <ModalContent bg="gray.700" color="gray.100">
+                <ModalHeader color="brand.500">Presença Confirmada!</ModalHeader>
+                <ModalCloseButton color="gray.100" />
                 <ModalBody>
                   <Text>Obrigada por confirmar sua presença! Em breve você receberá mais informações sobre o evento.</Text>
                 </ModalBody>
