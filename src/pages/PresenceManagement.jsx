@@ -167,7 +167,7 @@ const PresenceManagement = () => {
               <StatNumber>{stats.confirmed}</StatNumber>
               <StatHelpText>
                 <StatArrow type="increase" />
-                {((stats.confirmed / stats.total) * 100).toFixed(1)}% do total
+                {stats.total > 0 ? ((stats.confirmed / stats.total) * 100).toFixed(1) : 0}% do total
               </StatHelpText>
             </Stat>
 
