@@ -54,14 +54,28 @@ export async function searchSpotify(query, limit = 10) {
   const data = await res.json();
 
   // Transforma os resultados para incluir apenas as informações necessárias
-  return (data.tracks?.items || []).map((track) => ({
-    spotify_id: track.id,
-    song_title: track.name,
-    artist: track.artists.map((artist) => artist.name).join(", "),
-    album_name: track.album.name,
-    album_image_url: track.album.images[0]?.url,
-    preview_url: track.preview_url,
-    duration_ms: track.duration_ms,
-    spotify_url: track.external_urls.spotify,
-  }));
+  return (data.tracks?.items || []).map((track) => {
+    // Remove available_markets from album if it exists
+    if (track.album && track.album.available_markets) {
+      delete track.album.available_markets;
+    }
+    // Remove available_markets from track if it exists
+    if (track.available_markets) {
+      delete track.available_markets;
+    }
+
+    return {
+      spotify_id: track.id,
+      song_title: track.name,
+      artist: track.artists.map((artist) => artist.name).join(", "),
+      album_name: track.album.name,
+      image_url:
+        track.album.images && track.album.images.length > 0
+          ? track.album.images[0].url
+          : null,
+      preview_url: track.preview_url,
+      duration_ms: track.duration_ms,
+      spotify_url: track.external_urls.spotify,
+    };
+  });
 }
