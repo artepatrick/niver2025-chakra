@@ -58,6 +58,36 @@ const theme = extendTheme({
         },
       },
     },
+    Table: {
+      baseStyle: {
+        th: {
+          color: "gray.200",
+          borderColor: "gray.600",
+        },
+        td: {
+          color: "gray.200",
+          borderColor: "gray.600",
+        },
+      },
+    },
+    Box: {
+      baseStyle: {
+        bg: "gray.700",
+      },
+    },
+    Stat: {
+      baseStyle: {
+        label: {
+          color: "gray.200",
+        },
+        number: {
+          color: "white",
+        },
+        helpText: {
+          color: "gray.400",
+        },
+      },
+    },
   },
 });
 
