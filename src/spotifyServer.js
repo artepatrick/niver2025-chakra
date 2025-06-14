@@ -55,27 +55,27 @@ export async function searchSpotify(query, limit = 10) {
 
   // Transforma os resultados para incluir apenas as informações necessárias
   return (data.tracks?.items || []).map((track) => {
-    // Remove available_markets from album if it exists
-    if (track.album && track.album.available_markets) {
-      delete track.album.available_markets;
-    }
-    // Remove available_markets from track if it exists
-    if (track.available_markets) {
-      delete track.available_markets;
-    }
+    // Create a new object without available_markets using destructuring
+    const { album, ...trackWithoutMarkets } = track;
+    const { available_markets: _, ...albumWithoutMarkets } = album || {};
+
+    // Get the album image URL
+    const albumImageUrl =
+      albumWithoutMarkets.images && albumWithoutMarkets.images.length > 0
+        ? albumWithoutMarkets.images[0].url
+        : null;
 
     return {
-      spotify_id: track.id,
-      song_title: track.name,
-      artist: track.artists.map((artist) => artist.name).join(", "),
-      album_name: track.album.name,
-      image_url:
-        track.album.images && track.album.images.length > 0
-          ? track.album.images[0].url
-          : null,
-      preview_url: track.preview_url,
-      duration_ms: track.duration_ms,
-      spotify_url: track.external_urls.spotify,
+      spotify_id: trackWithoutMarkets.id,
+      song_title: trackWithoutMarkets.name,
+      artist: trackWithoutMarkets.artists
+        .map((artist) => artist.name)
+        .join(", "),
+      album_name: albumWithoutMarkets.name,
+      album_image_url: albumImageUrl,
+      preview_url: trackWithoutMarkets.preview_url,
+      duration_ms: trackWithoutMarkets.duration_ms,
+      spotify_url: trackWithoutMarkets.external_urls.spotify,
     };
   });
 }

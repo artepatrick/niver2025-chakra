@@ -41,7 +41,9 @@ import { searchSpotify } from './spotifyServer'
 import '@fontsource/georama'
 
 const EVENT_DATE = new Date('2025-06-28T16:00:00')
-const BASE_URL = 'https://omnicast-backend.fly.dev'
+const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8080'
+  : 'https://omnicast-backend.fly.dev')
 const EXTERNAL_API_BASE_URL = 'https://api.tolky.to'
 const TOLKY_API_TOKEN = 'S30LusdLYOEjsFe2DNa4CVI9ny4Yi8N2YAX7gw9Yapg'
 
@@ -206,7 +208,7 @@ function App() {
         song_title: track.song_title || track.name,
         artist: track.artist || '',
         spotify_url: track.spotify_url || track.spotifyUrl,
-        image_url: track.image_url,
+        album_image_url: track.album_image_url,
         preview_url: track.preview_url || track.previewUrl,
         duration_ms: track.duration_ms || track.duration,
         spotify_id: track.spotify_id || track.id,
@@ -243,7 +245,18 @@ function App() {
         // Pre-fill form with existing data
         setEmail(initialEmail)
         setNames(data.data.names)
-        setPhone(data.data.phone || '')
+        // Format phone number before setting it
+        if (data.data.phone) {
+          const phoneNumber = data.data.phone.replace(/\D/g, '')
+          let formattedPhone = phoneNumber
+          if (phoneNumber.length > 2) {
+            formattedPhone = `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`
+          }
+          if (phoneNumber.length > 9) {
+            formattedPhone = `${formattedPhone.slice(0, 9)}-${formattedPhone.slice(9)}`
+          }
+          setPhone(formattedPhone)
+        }
         setExistingStatus(data.data.status)
         setSuggestedMusic(data.data.music_suggestions || [])
       } else {
@@ -360,16 +373,21 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
       email,
       phone: phone.replace(/\D/g, ''),
       names: names.filter(name => name.trim() !== ''),
-      musicSuggestions: suggestedMusic.map(music => ({
-        song_title: music.song_title || music.name,
-        artist: music.artist || '',
-        spotify_url: music.spotify_url || music.spotifyUrl,
-        image_url: music.image_url || music.imageUrl,
-        preview_url: music.preview_url || music.previewUrl,
-        duration_ms: music.duration_ms || music.duration,
-        spotify_id: music.spotify_id || music.id,
-        album_name: music.album_name || music.album
-      })),
+      musicSuggestions: suggestedMusic.map(music => {
+        console.log('Original music object:', music);
+        const mappedMusic = {
+          song_title: music.song_title || music.name,
+          artist: music.artist || '',
+          spotify_url: music.spotify_url || music.spotifyUrl,
+          album_image_url: music.album_image_url,
+          preview_url: music.preview_url || music.previewUrl,
+          duration_ms: music.duration_ms || music.duration,
+          spotify_id: music.spotify_id || music.id,
+          album_name: music.album_name || music.album
+        };
+        console.log('Mapped music object:', mappedMusic);
+        return mappedMusic;
+      }),
     }
 
     try {
@@ -394,11 +412,13 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
         throw new Error(submitData.message || 'Falha ao enviar formulário');
       }
 
-      // Notify organizers about the new registration
-      await notifyOrganizers(formData);
+      // Notify organizers about the new registration asynchronously
+      notifyOrganizers(formData).catch(error => {
+        console.error('Error sending organizer notifications:', error);
+      });
 
-      let generalInstructions = ` envie a seguinte mensagem: 'Quem sabe aqui a gente pede pra falar: Olá! Aqui é o assistente virtual do Patrick! Obrigada por confirmar a sua presença no aniversário da Carol! Ela vai ficar muito feliz'
-      **Instrução para IA - Confirmação de Presença (Aniversário da Carol)**
+      let generalInstructions = ` envie a seguinte mensagem: 'Olá! Aqui é o assistente virtual do Patrick! Obrigada por confirmar a sua presença no aniversário da Carol! Ela vai ficar muito feliz'
+      A seguir um contexto SOMENTE para o caso de o usuário interagir na convers:
 
 A festa de 40 anos da Carol será no dia **28/06/2025**, às **16h**, no **Feliz da Vila Bistrô (Rua Johnson, 345 - União)**. O espaço estará **fechado exclusivamente para o evento**.
 
@@ -419,8 +439,8 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
 
       generalInstructions = generalInstructions.replace(/\s+/g, ' ');
 
-      // Send notifications
-      const notificationResponse = await fetch(
+      // Send notifications asynchronously
+      fetch(
         `${EXTERNAL_API_BASE_URL}/api/externalAPIs/public/externalNotificationAI`,
         {
           method: 'POST',
@@ -440,28 +460,18 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
             generalInstructions,
           }),
         }
-      )
+      ).catch(error => {
+        console.error('Error sending user notification:', error);
+      });
 
-      const notificationData = await notificationResponse.json()
-
-      if (notificationData.code !== 200 || notificationData.data.summary.failedItems > 0) {
-        console.warn('Some notifications failed to send:', notificationData)
-      }
-
-      onSuccessOpen()
-      setNames([''])
-      setPhone('')
-      setEmail('')
-      setSuggestedMusic([])
+      onSuccessOpen();
+      setNames(['']);
+      setPhone('');
+      setEmail('');
+      setSuggestedMusic([]);
     } catch (error) {
-      console.error('Error submitting form:', error)
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro ao confirmar sua presença. Por favor, tente novamente mais tarde.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
+      console.error('Error submitting form:', error);
+      throw error; // Re-throw to be caught by handleSubmit
     }
   }
 
@@ -788,7 +798,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                                 spacing={3}
                               >
                                 <Image
-                                  src={track.image_url}
+                                  src={track.album_image_url}
                                   alt={`${track.song_title} album cover`}
                                   boxSize="50px"
                                   borderRadius="md"
@@ -813,7 +823,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                               {suggestedMusic.map((track) => (
                                 <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
                                   <Image
-                                    src={track.image_url}
+                                    src={track.album_image_url}
                                     alt={`${track.song_title} album cover`}
                                     boxSize="50px"
                                     borderRadius="md"
