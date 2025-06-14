@@ -240,14 +240,19 @@ function App() {
       })
 
       const data = await response.json()
+      console.log('Full response data:', JSON.stringify(data, null, 2))
+      console.log('Response data.data:', JSON.stringify(data.data, null, 2))
 
       if (response.ok && data.data?.exists) {
+        console.log('Existing user data:', JSON.stringify(data.data, null, 2))
         // Pre-fill form with existing data
         setEmail(initialEmail)
         setNames(data.data.names)
         // Format phone number before setting it
         if (data.data.phone) {
+          console.log('Phone number from response:', data.data.phone)
           const phoneNumber = data.data.phone.replace(/\D/g, '')
+          console.log('Cleaned phone number:', phoneNumber)
           let formattedPhone = phoneNumber
           if (phoneNumber.length > 2) {
             formattedPhone = `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`
@@ -255,7 +260,11 @@ function App() {
           if (phoneNumber.length > 9) {
             formattedPhone = `${formattedPhone.slice(0, 9)}-${formattedPhone.slice(9)}`
           }
+          console.log('Formatted phone number:', formattedPhone)
           setPhone(formattedPhone)
+        } else {
+          console.log('No phone number in response data')
+          console.log('Available fields in data.data:', Object.keys(data.data))
         }
         setExistingStatus(data.data.status)
         setSuggestedMusic(data.data.music_suggestions || [])
