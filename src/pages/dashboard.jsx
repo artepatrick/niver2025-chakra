@@ -215,8 +215,7 @@ const Dashboard = () => {
         names: namesArray,
         email: currentConfirmation.email,
         phone: currentConfirmation.phone,
-        status: newStatus,
-        confirmed: newStatus === 'confirmado'
+        status: newStatus
       };
       
       console.log('Payload:', payload);
@@ -300,8 +299,7 @@ const Dashboard = () => {
         names: namesArray,
         email: formData.email,
         phone: formData.phone,
-        status: formData.status,
-        confirmed: formData.status === 'confirmado'
+        status: formData.status
       };
       
       console.log('URL:', `${BASE_URL}/api/niver2025/updatePresenceDetails`);
