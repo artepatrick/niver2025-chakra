@@ -354,7 +354,7 @@ const Dashboard = () => {
       </Link>
       
       {/* Dashboard Header */}
-      <Box mb={8} p={6} bg="gray.700" borderRadius="xl" boxShadow="lg">
+      <Box mb={8} p={6} variant="customBg" borderRadius="xl" boxShadow="lg">
         <Heading mb={6} size="lg" color="white">Dashboard de Confirmações</Heading>
         
         {/* Countdown Timer */}
@@ -411,7 +411,7 @@ const Dashboard = () => {
       </Box>
 
       {/* Table */}
-      <Box overflowX="auto" bg="gray.700" borderRadius="xl" boxShadow="lg" p={6}>
+      <Box overflowX="auto" variant="customBg" borderRadius="xl" boxShadow="lg" p={6}>
         <Table variant="simple">
           <Thead>
             <Tr>
