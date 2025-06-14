@@ -232,20 +232,15 @@ const Dashboard = () => {
       if (responseData.code === 200 && responseData.data.updatedRecord) {
         console.log('Registro atualizado recebido:', responseData.data.updatedRecord);
         
-        // Update the local state with the updated record
-        setConfirmations(prevConfirmations => {
-          const updatedConfirmations = prevConfirmations.map(confirmation => 
-            confirmation.id === id ? responseData.data.updatedRecord : confirmation
-          );
-          console.log('Estado atualizado:', updatedConfirmations);
-          return updatedConfirmations;
-        });
-        
-        // Recalculate stats with the updated data
+        // Create the updated array once
         const updatedConfirmations = confirmations.map(confirmation => 
           confirmation.id === id ? responseData.data.updatedRecord : confirmation
         );
-        console.log('Recalculando estatísticas com:', updatedConfirmations);
+        
+        // Update the local state with the updated array
+        setConfirmations(updatedConfirmations);
+        
+        // Calculate stats using the same updated array
         calculateStats(updatedConfirmations);
         
         toast({
