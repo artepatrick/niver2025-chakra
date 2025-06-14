@@ -72,7 +72,13 @@ const theme = extendTheme({
     },
     Box: {
       baseStyle: {
-        bg: "gray.700",
+        bg: "gray.800",
+        color: "white",
+      },
+      variants: {
+        customBg: {
+          bg: "gray.700",
+        },
       },
     },
     Stat: {
