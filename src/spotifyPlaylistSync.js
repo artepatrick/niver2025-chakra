@@ -3,7 +3,7 @@
 
 import { getUserAccessToken } from "./spotifyServer";
 
-const PLAYLIST_ID = "7rEEyfVSL9e7UFZ2XMaSyC";
+const PLAYLIST_ID = "3885YwVwdWiLefIxZfmu3d";
 const BATCH_SIZE = 50; // Spotify API limit for adding tracks
 
 /**
