@@ -74,32 +74,74 @@ async function addTracksToPlaylist(trackIds) {
   }
 }
 
+// Utilitário para gravar logs no localStorage
+function logToStorage(message, type = "log") {
+  const logs = JSON.parse(localStorage.getItem("sync_logs") || "[]");
+  logs.push({ type, message, timestamp: new Date().toISOString() });
+  localStorage.setItem("sync_logs", JSON.stringify(logs));
+}
+
 /**
  * Sincroniza a playlist com as sugestões de música confirmadas
  * @param {Array} confirmations - Array com as confirmações de presença
  */
 export async function syncPlaylist(confirmations) {
   try {
+    console.log("Iniciando sincronização da playlist...");
+    logToStorage("Iniciando sincronização da playlist...");
+    console.log("Número de confirmações:", confirmations.length);
+    logToStorage(`Número de confirmações: ${confirmations.length}`);
+
+    // Verificar autenticação primeiro
+    const token = await getUserAccessToken();
+    if (!token) {
+      const msg =
+        "Usuário não autenticado, redirecionando para autenticação...";
+      console.log(msg);
+      logToStorage(msg, "warn");
+      return {
+        success: false,
+        error: "Usuário não autenticado",
+        needsAuth: true,
+      };
+    }
+
     // Obtém todas as músicas sugeridas das confirmações
     const suggestedTracks = confirmations
       .filter((conf) => conf.status === "confirmado")
       .flatMap((conf) => conf.music_suggestions || [])
       .filter((track) => track.spotify_id);
 
+    console.log("Músicas sugeridas encontradas:", suggestedTracks.length);
+    logToStorage(`Músicas sugeridas encontradas: ${suggestedTracks.length}`);
+
     // Obtém as músicas já na playlist
+    console.log("Obtendo músicas da playlist...");
+    logToStorage("Obtendo músicas da playlist...");
     const playlistTracks = await getPlaylistTracks();
+    console.log("Músicas na playlist:", playlistTracks.length);
+    logToStorage(`Músicas na playlist: ${playlistTracks.length}`);
 
     // Filtra apenas as músicas que ainda não estão na playlist
     const tracksToAdd = suggestedTracks
       .filter((track) => !playlistTracks.includes(track.spotify_id))
       .map((track) => track.spotify_id);
 
+    console.log("Músicas a serem adicionadas:", tracksToAdd.length);
+    logToStorage(`Músicas a serem adicionadas: ${tracksToAdd.length}`);
+
     // Adiciona as novas músicas à playlist
     if (tracksToAdd.length > 0) {
+      console.log("Adicionando músicas à playlist...");
+      logToStorage("Adicionando músicas à playlist...");
       await addTracksToPlaylist(tracksToAdd);
-      console.log(`Adicionadas ${tracksToAdd.length} novas músicas à playlist`);
+      const msg = `Adicionadas ${tracksToAdd.length} novas músicas à playlist`;
+      console.log(msg);
+      logToStorage(msg);
     } else {
-      console.log("Nenhuma nova música para adicionar à playlist");
+      const msg = "Nenhuma nova música para adicionar à playlist";
+      console.log(msg);
+      logToStorage(msg);
     }
 
     return {
@@ -108,6 +150,9 @@ export async function syncPlaylist(confirmations) {
     };
   } catch (error) {
     console.error("Erro ao sincronizar playlist:", error);
+    logToStorage(`Erro ao sincronizar playlist: ${error.message}`, "error");
+    console.error("Stack trace:", error.stack);
+    logToStorage(`Stack trace: ${error.stack}`, "error");
     throw error;
   }
 }

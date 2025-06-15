@@ -389,19 +389,40 @@ const Dashboard = () => {
 
   const handleSyncPlaylist = async () => {
     try {
+      console.log('Iniciando sincronização da playlist...');
       setIsSyncing(true);
+      
       toast({
-        title: 'Sincronizando playlist',
-        description: 'Aguarde enquanto adicionamos as novas músicas...',
+        title: 'Sincronizando playlist...',
+        description: 'Aguarde enquanto sincronizamos as músicas.',
         status: 'info',
         duration: null,
         isClosable: false,
-        position: 'top',
       });
 
+      console.log('Número de confirmações:', confirmations.length);
       const result = await syncPlaylist(confirmations);
+      console.log('Resultado da sincronização:', result);
       
       toast.closeAll();
+      
+      if (!result.success) {
+        if (result.needsAuth) {
+          console.log('Autenticação necessária, redirecionando...');
+          return;
+        }
+        
+        console.error('Erro na sincronização:', result.error);
+        toast({
+          title: 'Erro ao sincronizar playlist',
+          description: result.error || 'Ocorreu um erro ao sincronizar a playlist',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+      
       toast({
         title: 'Playlist sincronizada',
         description: `${result.addedTracks} novas músicas adicionadas à playlist`,
@@ -411,10 +432,11 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error syncing playlist:', error);
+      console.error('Stack trace:', error.stack);
       toast.closeAll();
       toast({
         title: 'Erro ao sincronizar playlist',
-        description: error.message,
+        description: error.message || 'Ocorreu um erro ao sincronizar a playlist',
         status: 'error',
         duration: 5000,
         isClosable: true,
