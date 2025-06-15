@@ -754,7 +754,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
       <Router>
         <Routes>
           {/* Rota de callback deve vir primeiro */}
-          <Route path="/" element={<SpotifyCallback renderInitialEmailScreen={renderInitialEmailScreen} />} />
+          <Route path="/callback" element={<SpotifyCallback renderInitialEmailScreen={renderInitialEmailScreen} />} />
           
           {/* Rotas principais */}
           <Route path="/dashboard" element={<Dashboard />} />
