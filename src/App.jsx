@@ -33,6 +33,7 @@ import {
   ChakraProvider,
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
+import { FaSpotify } from 'react-icons/fa'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
 import { searchSpotify } from './spotifyServer'
@@ -836,7 +837,10 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                       </FormControl>
 
                       <FormControl>
-                        <FormLabel fontSize="lg" fontWeight="600" color="white">Sugerir Músicas</FormLabel>
+                        <HStack spacing={2} mb={2}>
+                          <FaSpotify size={24} color="#1DB954" />
+                          <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
+                        </HStack>
                         <Text mb={2} fontSize="lg" color="white">
                           Sugira até 3 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
                         </Text>
