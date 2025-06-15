@@ -203,14 +203,24 @@ export function getAuthUrl() {
     const state = Math.random().toString(36).substring(7);
     console.log("State gerado:", state);
     logToStorage(`State gerado: ${state}`);
+
+    // Store state in localStorage before generating the URL
     localStorage.setItem("spotify_auth_state", state);
+    console.log(
+      "State salvo no localStorage:",
+      localStorage.getItem("spotify_auth_state")
+    );
+    logToStorage(
+      `State salvo no localStorage: ${localStorage.getItem(
+        "spotify_auth_state"
+      )}`
+    );
 
     const params = new URLSearchParams({
       client_id: SPOTIFY_CLIENT_ID,
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      scope:
-        "playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative",
+      scope: PLAYLIST_SCOPES,
       state: state,
       show_dialog: "true",
     });
@@ -239,12 +249,24 @@ export async function handleCallback(code, state) {
     console.log("State salvo:", savedState);
     logToStorage(`State salvo: ${savedState}`);
 
+    if (!savedState) {
+      const error = "State não encontrado no localStorage";
+      console.error(error);
+      logToStorage(error, "error");
+      throw new Error(error);
+    }
+
     if (state !== savedState) {
       const error = "State mismatch - possível ataque CSRF";
       console.error(error);
       logToStorage(error, "error");
       throw new Error(error);
     }
+
+    // Limpar o state imediatamente após verificação
+    localStorage.removeItem("spotify_auth_state");
+    console.log("State removido do localStorage após verificação");
+    logToStorage("State removido do localStorage após verificação");
 
     const credentials = btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
 
@@ -271,6 +293,23 @@ export async function handleCallback(code, state) {
         `Erro na resposta da API: ${response.status} - ${errorText}`,
         "error"
       );
+
+      // Se o código já foi usado, limpar os tokens existentes
+      if (response.status === 400 && errorText.includes("invalid_grant")) {
+        console.log(
+          "Código de autorização inválido ou já usado, limpando tokens..."
+        );
+        logToStorage(
+          "Código de autorização inválido ou já usado, limpando tokens..."
+        );
+        localStorage.removeItem("spotify_access_token");
+        localStorage.removeItem("spotify_refresh_token");
+        localStorage.removeItem("spotify_token_expires_at");
+        userAccessToken = null;
+        userRefreshToken = null;
+        userTokenExpiresAt = 0;
+      }
+
       throw new Error(
         `Failed to get access token: ${response.status} - ${errorText}`
       );
@@ -294,9 +333,6 @@ export async function handleCallback(code, state) {
     userAccessToken = data.access_token;
     userRefreshToken = data.refresh_token;
     userTokenExpiresAt = expiresAt;
-
-    // Limpar o state após uso
-    localStorage.removeItem("spotify_auth_state");
 
     // Verificar se os tokens foram salvos
     const savedAccessToken = localStorage.getItem("spotify_access_token");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Container,
@@ -37,7 +37,7 @@ import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { FaSpotify } from 'react-icons/fa'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
-import { searchSpotify } from './spotifyServer'
+import { searchSpotify, handleCallback as handleSpotifyCallback } from './spotifyServer'
 
 // Import Georama font
 import '@fontsource/georama'
@@ -120,20 +120,26 @@ const theme = extendTheme({
 })
 
 // Callback component to handle Spotify authentication
-function SpotifyCallback({ renderInitialEmailScreen }) {
+function SpotifyCallback() {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
     const state = params.get('state');
 
-    // Only handle callback if we have code and state
-    if (code && state) {
+    console.log('Callback received:', { code, state });
+    logToStorage(`Callback received: code=${code ? 'present' : 'absent'}, state=${state ? 'present' : 'absent'}`);
+
+    // Only handle callback if we have code and state and haven't processed yet
+    if (code && state && !hasProcessed.current) {
+      hasProcessed.current = true;
       handleCallback(code, state);
-    } else {
-      // If no code/state, redirect to home
+    } else if (!code || !state) {
+      console.log('No code or state found, redirecting to home');
+      logToStorage('No code or state found, redirecting to home');
       navigate('/');
     }
   }, [location]);
@@ -150,10 +156,29 @@ function SpotifyCallback({ renderInitialEmailScreen }) {
         return;
       }
 
+      // Verify state before proceeding
+      const savedState = localStorage.getItem('spotify_auth_state');
+      console.log('State salvo:', savedState);
+      logToStorage(`State salvo: ${savedState}`);
+
+      if (!savedState) {
+        console.error('State não encontrado no localStorage');
+        logToStorage('State não encontrado no localStorage', 'error');
+        navigate('/');
+        return;
+      }
+
+      if (state !== savedState) {
+        console.error('State mismatch - possível ataque CSRF');
+        logToStorage('State mismatch - possível ataque CSRF', 'error');
+        navigate('/');
+        return;
+      }
+
       console.log('Código e state recebidos, processando callback...');
       logToStorage('Código e state recebidos, processando callback...');
 
-      const result = await handleCallback(code, state);
+      const result = await handleSpotifyCallback(code, state);
       console.log('Resultado do callback:', result);
       logToStorage(`Resultado do callback: ${JSON.stringify(result)}`);
 
@@ -170,7 +195,13 @@ function SpotifyCallback({ renderInitialEmailScreen }) {
     } catch (error) {
       console.error('Error handling Spotify callback:', error);
       logToStorage(`Erro no callback do Spotify: ${error.message}`, 'error');
-      navigate('/');
+      
+      // If we get an invalid_grant error, redirect to home and show error
+      if (error.message.includes('invalid_grant')) {
+        navigate('/', { state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' } });
+      } else {
+        navigate('/');
+      }
     }
   };
 
@@ -742,7 +773,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
       <Router>
         <Routes>
           {/* Rota de callback deve vir primeiro */}
-          <Route path="/callback" element={<SpotifyCallback renderInitialEmailScreen={renderInitialEmailScreen} />} />
+          <Route path="/callback" element={<SpotifyCallback />} />
           
           {/* Rotas principais */}
           <Route path="/dashboard" element={<Dashboard />} />

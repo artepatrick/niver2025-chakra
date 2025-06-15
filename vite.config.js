@@ -5,4 +5,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "/",
+  server: {
+    port: 5173,
+    host: true,
+    strictPort: true,
+    // Handle all routes through index.html for client-side routing
+    historyApiFallback: true,
+  },
 });
