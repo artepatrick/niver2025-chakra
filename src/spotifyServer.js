@@ -12,7 +12,7 @@ const SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515";
 const SPOTIFY_CLIENT_SECRET = "f336d02deed4469586576ae2fb3944fa";
 const REDIRECT_URI = import.meta.env.DEV
   ? "http://127.0.0.1:5173"
-  : "https://beta-niver2025.netlify.app";
+  : "https://beta-niver2025.netlify.app/";
 
 // Tokens para autenticação do app (client credentials)
 let appAccessToken = null;
