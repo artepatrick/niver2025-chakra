@@ -676,108 +676,103 @@ const Dashboard = () => {
               </Box>
             </TabPanel>
 
-            {/* Music Suggestions Panel */}
-            <TabPanel p={0}>
-              <Box 
-                bg="gray.800"
-                borderRadius="xl" 
-                boxShadow="lg" 
-                p={6}
-                border="1px solid"
-                borderColor="gray.700"
-              >
-                <HStack justify="space-between" mb={6}>
-                  <Heading size="md" color="brand.400">Músicas Sugeridas</Heading>
-                  <Button
-                    leftIcon={<FaSpotify />}
-                    colorScheme="green"
-                    onClick={handleSyncPlaylist}
-                    isLoading={isSyncing}
-                    loadingText="Sincronizando..."
-                  >
-                    Sincronizar Playlist
-                  </Button>
-                </HStack>
-                {loading ? (
-                  <Box p={4}>
-                    <SkeletonText noOfLines={5} spacing={4} />
-                  </Box>
-                ) : (
-                  <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                    {confirmations.flatMap(confirmation => 
-                      confirmation.music_suggestions?.map(music => (
-                        <Box 
-                          key={music.id}
-                          bg="gray.700"
-                          borderRadius="lg"
-                          p={4}
-                          _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
-                        >
-                          <HStack spacing={4} align="start">
-                            <Box 
-                              minW="80px" 
-                              h="80px" 
-                              bg="gray.600" 
-                              borderRadius="md" 
-                              overflow="hidden"
-                              position="relative"
-                            >
-                              {music.album_image_url && (
-                                <Image
-                                  src={music.album_image_url}
-                                  alt={`Capa do álbum ${music.album_name}`}
-                                  boxSize="80px"
-                                  objectFit="cover"
-                                  fallback={
-                                    <Box 
-                                      w="80px" 
-                                      h="80px" 
-                                      bg="gray.600" 
-                                      display="flex" 
-                                      alignItems="center" 
-                                      justifyContent="center"
-                                    >
-                                      <Icon as={TimeIcon} color="brand.400" boxSize={8} />
-                                    </Box>
-                                  }
-                                />
-                              )}
-                            </Box>
-                            <VStack align="start" spacing={1} flex={1}>
-                              <Text fontWeight="bold" color="brand.400" fontSize="lg">
-                                {music.song_title}
-                              </Text>
-                              <Text color="gray.300">{music.artist}</Text>
-                              {music.album_name && (
-                                <Text color="gray.400" fontSize="sm">
-                                  Álbum: {music.album_name}
-                                </Text>
-                              )}
-                              {music.spotify_url && (
-                                <Link 
-                                  href={music.spotify_url} 
-                                  isExternal 
-                                  color="green.400" 
-                                  fontSize="sm"
-                                  _hover={{ color: 'green.300' }}
-                                >
-                                  Ouvir no Spotify →
-                                </Link>
-                              )}
-                              <Text color="gray.400" fontSize="xs">
-                                Sugerido por: {confirmation.names[0]}
-                              </Text>
-                            </VStack>
-                          </HStack>
-                        </Box>
-                      ))
-                    )}
-                  </SimpleGrid>
-                )}
+          {/* Music Suggestions Panel */}
+          <TabPanel>
+            <Box>
+              {/* Spotify Playlist Embed */}
+              <Box mb={8} borderRadius="xl" overflow="hidden">
+                <iframe 
+                  style={{ borderRadius: "12px" }} 
+                  src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                  width="100%" 
+                  height="352" 
+                  frameBorder="0" 
+                  allowFullScreen="" 
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                  loading="lazy"
+                />
               </Box>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+
+              {loading ? (
+                <Box p={4}>
+                  <SkeletonText noOfLines={5} spacing={4} />
+                </Box>
+              ) : (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {confirmations.flatMap(confirmation => 
+                    confirmation.music_suggestions?.map(music => (
+                      <Box 
+                        key={music.id}
+                        bg="gray.700"
+                        borderRadius="lg"
+                        p={4}
+                        _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
+                      >
+                        <HStack spacing={4} align="start">
+                          <Box 
+                            minW="80px" 
+                            h="80px" 
+                            bg="gray.600" 
+                            borderRadius="md" 
+                            overflow="hidden"
+                            position="relative"
+                          >
+                            {music.album_image_url && (
+                              <Image
+                                src={music.album_image_url}
+                                alt={`Capa do álbum ${music.album_name}`}
+                                boxSize="80px"
+                                objectFit="cover"
+                                fallback={
+                                  <Box 
+                                    w="80px" 
+                                    h="80px" 
+                                    bg="gray.600" 
+                                    display="flex" 
+                                    alignItems="center" 
+                                    justifyContent="center"
+                                  >
+                                    <Icon as={TimeIcon} color="brand.400" boxSize={8} />
+                                  </Box>
+                                }
+                              />
+                            )}
+                          </Box>
+                          <VStack align="start" spacing={1} flex={1}>
+                            <Text fontWeight="bold" color="brand.400" fontSize="lg">
+                              {music.song_title}
+                            </Text>
+                            <Text color="gray.300">{music.artist}</Text>
+                            {music.album_name && (
+                              <Text color="gray.400" fontSize="sm">
+                                Álbum: {music.album_name}
+                              </Text>
+                            )}
+                            {music.spotify_url && (
+                              <Link 
+                                href={music.spotify_url} 
+                                isExternal 
+                                color="green.400" 
+                                fontSize="sm"
+                                _hover={{ color: 'green.300' }}
+                              >
+                                Ouvir no Spotify →
+                              </Link>
+                            )}
+                            <Text color="gray.400" fontSize="xs">
+                              Sugerido por: {confirmation.names[0]}
+                            </Text>
+                          </VStack>
+                        </HStack>
+                      </Box>
+                    ))
+                  )}
+                </SimpleGrid>
+              )}
+            </Box>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
         {/* Edit Modal */}
         <Modal isOpen={isOpen} onClose={onClose} size="xl">

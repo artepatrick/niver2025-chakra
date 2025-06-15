@@ -759,22 +759,376 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
           {/* Rotas principais */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<Dashboard />} />
-          
-          {/* Rota catch-all */}
-          <Route path="*" element={
-            <Container maxW="container.xl" py={8}>
-              <VStack spacing={4}>
-                <Heading color="brand.400">Página não encontrada</Heading>
-                <Text>Desculpe, a página que você está procurando não existe.</Text>
-                <Button
-                  as={RouterLink}
-                  to="/"
-                  colorScheme="brand"
-                  size="lg"
-                >
-                  Voltar para a página inicial
-                </Button>
-              </VStack>
+          <Route path="/" element={
+            <Container maxW="container.md" py={8}>
+              {!showFullForm ? (
+                renderInitialEmailScreen()
+              ) : (
+                <VStack spacing={8} bg="#0A0A0A" p={8} borderRadius="xl" boxShadow="xl">
+                  {/* Profile Section */}
+                  <VStack spacing={4}>
+                    <Image
+                      src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
+                      alt="Ana Carolina Calazans"
+                      borderRadius="full"
+                      boxSize="200px"
+                      objectFit="cover"
+                      border="4px solid"
+                      borderColor="brand.400"
+                    />
+                    <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                      Ana Carolina Calazans
+                    </Heading>
+                    <Text fontSize="2xl" color="white" fontWeight="500">
+                      Confirme sua presença
+                    </Text>
+                  </VStack>
+
+                  {/* Countdown Section */}
+                  <VStack spacing={4}>
+                    <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                      Faltam
+                    </Heading>
+                    <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
+                      <VStack key="days">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.days}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Dias
+                        </Text>
+                      </VStack>
+                      <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="hours">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.hours}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Horas
+                        </Text>
+                      </VStack>
+                      <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="minutes">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.minutes}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Minutos
+                        </Text>
+                      </VStack>
+                      <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
+                        :
+                      </Text>
+                      <VStack key="seconds">
+                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                          {countdown.seconds}
+                        </Text>
+                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                          Segundos
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    <Button
+                      onClick={() => setShowDetails(!showDetails)}
+                      variant="ghost"
+                      colorScheme="brand"
+                      size="lg"
+                      fontWeight="600"
+                    >
+                      {showDetails ? 'Menos Detalhes' : 'Mais Detalhes'}
+                    </Button>
+
+                    {showDetails && (
+                      <Box
+                        bg="rgba(167, 139, 250, 0.1)"
+                        p={8}
+                        borderRadius="xl"
+                        w="full"
+                        backdropFilter="blur(8px)"
+                      >
+                        <VStack align="start" spacing={6}>
+                          <Box>
+                            <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
+                            <Text color="white" fontSize="lg">
+                              Carol vai comemorar seus 40 anos no dia 28 de junho, às 16 horas
+                            </Text>
+                          </Box>
+
+                          <Box>
+                            <Heading color="brand.400" size="lg" mb={4}>Lugar</Heading>
+                            <Text color="white" fontSize="lg">
+                              A festa vai acontecer no <Text as="span" fontWeight="700">Feliz da Vila Bistrô</Text>, localizado na Rua Johnson, 345, no bairro União. Será uma celebração especial com cartela individual. O local estará reservado exclusivamente para a festa.
+                            </Text>
+                            <Box mt={4} borderRadius="xl" overflow="hidden">
+                              <iframe 
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3752.0454327392695!2d-43.925100889195285!3d-19.88030338141984!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa69ba92dfb95e7%3A0x6f8899ec69063e27!2sFeliz%20da%20Vila%20Bistro!5e0!3m2!1spt-BR!2sbr!4v1750010651457!5m2!1spt-BR!2sbr" 
+                                width="100%" 
+                                height="450" 
+                                style={{ border: 0 }} 
+                                allowFullScreen="" 
+                                loading="lazy" 
+                                referrerPolicy="no-referrer-when-downgrade"
+                              />
+                            </Box>
+                          </Box>
+
+                          <Box>
+                            <Heading color="brand.400" size="lg" mb={4}>A banda</Heading>
+                            <Text color="white" fontSize="lg" mb={4}>
+                              Vamos ter uma banda de samba muito animada chamada Oiaki composta por amigos da Carol!
+                            </Text>
+                            <Box borderRadius="xl" overflow="hidden" mb={4}>
+                              <iframe 
+                                src="https://www.instagram.com/p/Cd8dinvOagN/embed"
+                                className="snapwidget-widget"
+                                allowTransparency="true"
+                                frameBorder="0"
+                                scrolling="no"
+                                style={{ border: 'none', overflow: 'hidden', width: '100%', height: '600px' }}
+                              />
+                            </Box>
+                          </Box>
+                        </VStack>
+                      </Box>
+                    )}
+                  </VStack>
+
+                  {/* Form Section */}
+                  <Box as="form" w="full" onSubmit={handleSubmit}>
+                    <VStack spacing={6} align="stretch">
+                      {names.map((name, index) => (
+                        <HStack key={index}>
+                          <FormControl isRequired>
+                            <FormLabel fontSize="lg" fontWeight="600" color="white">Nome Completo</FormLabel>
+                            <Input
+                              value={name}
+                              onChange={(e) => handleNameChange(index, e.target.value)}
+                              placeholder="Digite seu nome completo"
+                            />
+                          </FormControl>
+                          {index > 0 && (
+                            <IconButton
+                              icon={<DeleteIcon />}
+                              onClick={() => handleRemoveName(index)}
+                              aria-label="Remover nome"
+                              colorScheme="red"
+                              variant="ghost"
+                              size="lg"
+                            />
+                          )}
+                        </HStack>
+                      ))}
+
+                      <Button
+                        leftIcon={<AddIcon />}
+                        onClick={handleAddName}
+                        variant="ghost"
+                        colorScheme="brand"
+                        alignSelf="flex-start"
+                        size="lg"
+                        fontWeight="600"
+                      >
+                        Adicionar mais um nome
+                      </Button>
+
+                      <FormControl>
+                        <FormLabel fontSize="lg" fontWeight="600" color="white">Telefone</FormLabel>
+                        <Input
+                          value={phone}
+                          onChange={handlePhoneChange}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </FormControl>
+
+                      <FormControl isRequired>
+                        <FormLabel fontSize="lg" fontWeight="600" color="white">E-mail</FormLabel>
+                        <InputGroup>
+                          <Input
+                            type="email"
+                            value={email}
+                            onChange={handleEmailChange}
+                            placeholder="seu@email.com"
+                          />
+                          {isCheckingEmail && (
+                            <InputRightElement>
+                              <Spinner size="sm" color="brand.500" />
+                            </InputRightElement>
+                          )}
+                        </InputGroup>
+                        {showExistingGuests && (
+                          <Box mt={2} p={4} bg="#181818" borderRadius="xl">
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">
+                              Encontramos um registro existente com status: <Badge colorScheme={existingStatus === 'confirmado' ? 'green' : existingStatus === 'pendente' ? 'yellow' : 'red'}>{existingStatus}</Badge>
+                            </Text>
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">
+                              Convidados registrados:
+                            </Text>
+                            <List mb={2}>
+                              {names.map((guest, index) => (
+                                <ListItem key={index} fontSize="lg" color="white">
+                                  {guest}
+                                </ListItem>
+                              ))}
+                            </List>
+                            <Button
+                              size="lg"
+                              colorScheme="brand"
+                              onClick={handleAddExistingGuests}
+                              leftIcon={<AddIcon />}
+                              fontWeight="600"
+                            >
+                              Adicionar convidados existentes
+                            </Button>
+                          </Box>
+                        )}
+                      </FormControl>
+
+                      <FormControl>
+                        <HStack spacing={2} mb={2}>
+                          <FaSpotify size={24} color="#1DB954" />
+                          <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
+                        </HStack>
+                        <Text mb={2} fontSize="lg" color="white">
+                          Sugira até 3 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
+                        </Text>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <SearchIcon color="white" boxSize="5" />
+                          </InputLeftElement>
+                          <Input
+                            value={musicSearch}
+                            onChange={handleMusicSearch}
+                            placeholder="Busque uma música..."
+                            bg="#181818"
+                            color="white"
+                            isDisabled={suggestedMusic.length >= 3}
+                          />
+                          <InputRightElement>
+                            {isSearching && <Spinner size="sm" color="brand.500" />}
+                          </InputRightElement>
+                        </InputGroup>
+                        {musicLimitError && (
+                          <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
+                            Limite de 3 músicas atingido.
+                          </Text>
+                        )}
+                        {searchResults.length > 0 && (
+                          <Box mt={2} maxH="200px" overflowY="auto" bg="#181818" borderRadius="xl">
+                            {searchResults.map((track) => (
+                              <HStack
+                                key={track.spotify_id}
+                                p={3}
+                                _hover={{ bg: '#282828' }}
+                                cursor="pointer"
+                                onClick={() => handleAddMusic(track)}
+                                spacing={3}
+                              >
+                                <Image
+                                  src={track.album_image_url}
+                                  alt={`${track.song_title} album cover`}
+                                  boxSize="50px"
+                                  borderRadius="md"
+                                  objectFit="cover"
+                                />
+                                <VStack align="start" spacing={0} flex={1}>
+                                  <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
+                                    {track.song_title}
+                                  </Text>
+                                  <Text color="gray.300" fontSize="md" noOfLines={1}>
+                                    {track.artist}
+                                  </Text>
+                                </VStack>
+                              </HStack>
+                            ))}
+                          </Box>
+                        )}
+                        {suggestedMusic.length > 0 && (
+                          <Box mt={4}>
+                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">Músicas Sugeridas:</Text>
+                            <VStack align="stretch" spacing={2}>
+                              {suggestedMusic.map((track) => (
+                                <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
+                                  <Image
+                                    src={track.album_image_url}
+                                    alt={`${track.song_title} album cover`}
+                                    boxSize="50px"
+                                    borderRadius="md"
+                                    objectFit="cover"
+                                  />
+                                  <VStack align="start" spacing={0} flex={1}>
+                                    <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
+                                      {track.song_title}
+                                    </Text>
+                                    <Text color="gray.300" fontSize="md" noOfLines={1}>
+                                      {track.artist}
+                                    </Text>
+                                  </VStack>
+                                  <IconButton
+                                    icon={<DeleteIcon />}
+                                    size="lg"
+                                    variant="ghost"
+                                    colorScheme="red"
+                                    onClick={() => handleRemoveMusic(track.spotify_id)}
+                                    aria-label="Remover música"
+                                  />
+                                </HStack>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                      </FormControl>
+
+                      {/* Spotify Playlist Embed */}
+                      <Box mt={4} borderRadius="xl" overflow="hidden">
+                        <iframe 
+                          style={{ borderRadius: "12px" }} 
+                          src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                          width="100%" 
+                          height="352" 
+                          frameBorder="0" 
+                          allowFullScreen="" 
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                          loading="lazy"
+                        />
+                      </Box>
+
+                      <Button
+                        type="submit"
+                        colorScheme="brand"
+                        size="lg"
+                        height="70px"
+                        fontSize="xl"
+                        fontWeight="700"
+                        isLoading={isLoading}
+                        loadingText="Confirmando..."
+                      >
+                        Confirmar Presença
+                      </Button>
+                    </VStack>
+                  </Box>
+                </VStack>
+              )}
+
+              {/* Success Modal */}
+              <Modal isOpen={isSuccessOpen} onClose={onSuccessClose}>
+                <ModalOverlay />
+                <ModalContent bg="#181818" color="white" borderRadius="xl">
+                  <ModalHeader color="brand.500" fontSize="2xl" fontWeight="700">Presença Confirmada!</ModalHeader>
+                  <ModalCloseButton color="white" />
+                  <ModalBody>
+                    <Text fontSize="lg" fontWeight="500">Obrigada por confirmar sua presença! Em breve você receberá mais informações sobre o evento.</Text>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button colorScheme="brand" size="lg" fontWeight="600" onClick={onSuccessClose}>
+                      Fechar
+                    </Button>
+                  </ModalFooter>
+                </ModalContent>
+              </Modal>
             </Container>
           } />
         </Routes>
