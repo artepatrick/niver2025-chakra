@@ -34,9 +34,9 @@ import {
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { FaSpotify } from 'react-icons/fa'
-import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
-import { searchSpotify } from './spotifyServer'
+import { searchSpotify, handleCallback } from './spotifyServer'
 
 // Import Georama font
 import '@fontsource/georama'
@@ -110,6 +110,53 @@ const theme = extendTheme({
     },
   },
 })
+
+// Callback component to handle Spotify authentication
+const SpotifyCallback = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  useEffect(() => {
+    const handleSpotifyCallback = async () => {
+      try {
+        const code = new URLSearchParams(location.search).get('code');
+        if (code) {
+          await handleCallback(code);
+          toast({
+            title: 'Autenticação concluída',
+            description: 'Você foi autenticado com sucesso no Spotify!',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error handling Spotify callback:', error);
+        toast({
+          title: 'Erro na autenticação',
+          description: 'Não foi possível completar a autenticação com o Spotify.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/');
+      }
+    };
+
+    handleSpotifyCallback();
+  }, [location, navigate, toast]);
+
+  return (
+    <Container centerContent py={10}>
+      <VStack spacing={4}>
+        <Spinner size="xl" color="brand.400" />
+        <Text>Processando autenticação do Spotify...</Text>
+      </VStack>
+    </Container>
+  );
+};
 
 function App() {
   const [countdown, setCountdown] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' })
@@ -667,7 +714,9 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
     <ChakraProvider theme={theme}>
       <Router>
         <Routes>
+          <Route path="/callback" element={<SpotifyCallback />} />
           <Route path="/admin" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/" element={
             <Container maxW="container.md" py={8}>
               {!showFullForm ? (
