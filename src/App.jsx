@@ -128,6 +128,7 @@ function App() {
   const [musicLimitError, setMusicLimitError] = useState(false)
   const [showFullForm, setShowFullForm] = useState(false)
   const [initialEmail, setInitialEmail] = useState('')
+  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(updateCountdown, 1000)
@@ -199,7 +200,7 @@ function App() {
   }
 
   const handleAddMusic = (track) => {
-    if (suggestedMusic.length >= 10) {
+    if (suggestedMusic.length >= 3) {
       setMusicLimitError(true)
       return
     }
@@ -500,10 +501,10 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
           borderColor="brand.400"
         />
         <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-          Ana Carolina Calazans
+          40 anos da Carol
         </Heading>
         <Text fontSize="2xl" color="white" fontWeight="500">
-          Confirme sua presença
+          Confirme sua presença!
         </Text>
       </VStack>
 
@@ -555,10 +556,73 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
             </Text>
           </VStack>
         </HStack>
-        <Text fontSize="xl" color="white" fontStyle="italic" fontWeight="500">
-          para o grande dia!
-        </Text>
       </VStack>
+
+      {/* Details Button */}
+      <Button
+        onClick={() => setShowDetails(!showDetails)}
+        variant="ghost"
+        colorScheme="brand"
+        size="lg"
+        fontWeight="600"
+      >
+        {showDetails ? 'Menos Detalhes' : 'Mais Detalhes'}
+      </Button>
+
+      {/* Details Section */}
+      {showDetails && (
+        <Box
+          bg="rgba(167, 139, 250, 0.1)"
+          p={8}
+          borderRadius="xl"
+          w="full"
+          backdropFilter="blur(8px)"
+        >
+          <VStack align="start" spacing={6}>
+            <Box>
+              <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
+              <Text color="white" fontSize="lg">
+                Carol vai comemorar seus 40 anos no dia 28 de junho, às 16 horas
+              </Text>
+            </Box>
+
+            <Box>
+              <Heading color="brand.400" size="lg" mb={4}>Lugar</Heading>
+              <Text color="white" fontSize="lg">
+                A festa vai acontecer no <Text as="span" fontWeight="700">Feliz da Vila Bistrô</Text>, localizado na Rua Johnson, 345, no bairro União. Será uma celebração especial com cartela individual. O local estará reservado exclusivamente para a festa.
+              </Text>
+              <Box mt={4} borderRadius="xl" overflow="hidden">
+                <iframe 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3752.0454327392695!2d-43.925100889195285!3d-19.88030338141984!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa69ba92dfb95e7%3A0x6f8899ec69063e27!2sFeliz%20da%20Vila%20Bistro!5e0!3m2!1spt-BR!2sbr!4v1750010651457!5m2!1spt-BR!2sbr" 
+                  width="100%" 
+                  height="450" 
+                  style={{ border: 0 }} 
+                  allowFullScreen="" 
+                  loading="lazy" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </Box>
+            </Box>
+
+            <Box>
+              <Heading color="brand.400" size="lg" mb={4}>A banda</Heading>
+              <Text color="white" fontSize="lg" mb={4}>
+                Vamos ter uma banda de samba muito animada chamada Oiaki composta por amigos da Carol!
+              </Text>
+              <Box borderRadius="xl" overflow="hidden" mb={4}>
+                <iframe 
+                  src="https://www.instagram.com/p/Cd8dinvOagN/embed"
+                  className="snapwidget-widget"
+                  allowTransparency="true"
+                  frameBorder="0"
+                  scrolling="no"
+                  style={{ border: 'none', overflow: 'hidden', width: '100%', height: '600px' }}
+                />
+              </Box>
+            </Box>
+          </VStack>
+        </Box>
+      )}
 
       {/* Initial Email Form */}
       <Box as="form" w="full" onSubmit={handleInitialEmailSubmit}>
@@ -774,7 +838,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                       <FormControl>
                         <FormLabel fontSize="lg" fontWeight="600" color="white">Sugerir Músicas</FormLabel>
                         <Text mb={2} fontSize="lg" color="white">
-                          Escolha suas músicas favoritas e ajude a festa a ser diversa e criativa! (máx. 10)
+                          Sugira até 3 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
                         </Text>
                         <InputGroup>
                           <InputLeftElement pointerEvents="none">
@@ -786,7 +850,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                             placeholder="Busque uma música..."
                             bg="#181818"
                             color="white"
-                            isDisabled={suggestedMusic.length >= 10}
+                            isDisabled={suggestedMusic.length >= 3}
                           />
                           <InputRightElement>
                             {isSearching && <Spinner size="sm" color="brand.500" />}
@@ -794,7 +858,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                         </InputGroup>
                         {musicLimitError && (
                           <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
-                            Limite de 10 músicas atingido.
+                            Limite de 3 músicas atingido.
                           </Text>
                         )}
                         {searchResults.length > 0 && (
