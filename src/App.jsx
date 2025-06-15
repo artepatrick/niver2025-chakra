@@ -131,19 +131,17 @@ function SpotifyCallback({ renderInitialEmailScreen }) {
 
     // Only handle callback if we have code and state
     if (code && state) {
-      handleCallback();
+      handleCallback(code, state);
+    } else {
+      // If no code/state, redirect to home
+      navigate('/');
     }
   }, [location]);
 
-  const handleCallback = async () => {
+  const handleCallback = async (code, state) => {
     try {
       console.log('Iniciando processamento do callback do Spotify...');
       logToStorage('Iniciando processamento do callback do Spotify...');
-
-      // Get code and state from URL parameters
-      const params = new URLSearchParams(location.search);
-      const code = params.get('code');
-      const state = params.get('state');
 
       if (!code || !state) {
         console.log('Código ou state não encontrados na URL');
@@ -175,16 +173,6 @@ function SpotifyCallback({ renderInitialEmailScreen }) {
       navigate('/');
     }
   };
-
-  // If we don't have code and state, render the main content
-  const params = new URLSearchParams(location.search);
-  if (!params.get('code') || !params.get('state')) {
-    return (
-      <Container maxW="container.xl" py={8}>
-        {renderInitialEmailScreen()}
-      </Container>
-    );
-  }
 
   // Show loading state while processing callback
   return (
