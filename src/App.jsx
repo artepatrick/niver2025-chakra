@@ -449,32 +449,32 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
 - Detalhes do evento.
 `
 
-      generalInstructions = generalInstructions.replace(/\s+/g, ' ');
+      // generalInstructions = generalInstructions.replace(/\s+/g, ' ');
 
       // Send notifications asynchronously
-      fetch(
-        `${EXTERNAL_API_BASE_URL}/api/externalAPIs/public/externalNotificationAI`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${TOLKY_API_TOKEN}`,
-          },
-          body: JSON.stringify({
-            data: [
-              {
-                phone: phone.replace(/\D/g, ''),
-                userName: names[0],
-                eventType: 'aniversario',
-                eventDate: EVENT_DATE.toISOString(),
-              },
-            ],
-            generalInstructions,
-          }),
-        }
-      ).catch(error => {
-        console.error('Error sending user notification:', error);
-      });
+      // fetch(
+      //   `${EXTERNAL_API_BASE_URL}/api/externalAPIs/public/externalNotificationAI`,
+      //   {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //       Authorization: `Bearer ${TOLKY_API_TOKEN}`,
+      //     },
+      //     body: JSON.stringify({
+      //       data: [
+      //         {
+      //           phone: phone.replace(/\D/g, ''),
+      //           userName: names[0],
+      //           eventType: 'aniversario',
+      //           eventDate: EVENT_DATE.toISOString(),
+      //         },
+      //       ],
+      //       generalInstructions,
+      //     }),
+      //   }
+      // ).catch(error => {
+      //   console.error('Error sending user notification:', error);
+      // });
 
       onSuccessOpen();
       setNames(['']);
