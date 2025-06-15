@@ -11,8 +11,8 @@ function logToStorage(message, type = "log") {
 const SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515";
 const SPOTIFY_CLIENT_SECRET = "f336d02deed4469586576ae2fb3944fa";
 const REDIRECT_URI = import.meta.env.DEV
-  ? "http://127.0.0.1:5173/callback"
-  : "https://niver2025.netlify.app/callback";
+  ? "http://127.0.0.1:5173"
+  : "https://niver2025.netlify.app";
 
 // Tokens para autenticação do app (client credentials)
 let appAccessToken = null;
@@ -62,9 +62,26 @@ export async function getUserAccessToken() {
     console.log("Verificando token do usuário...");
     logToStorage("Verificando token do usuário...");
 
+    // First check in-memory variables
+    if (
+      userAccessToken &&
+      userTokenExpiresAt &&
+      Date.now() < userTokenExpiresAt
+    ) {
+      console.log("Usando token em memória");
+      logToStorage("Usando token em memória");
+      return userAccessToken;
+    }
+
+    // If not in memory or expired, check localStorage
     const accessToken = localStorage.getItem("spotify_access_token");
     const refreshToken = localStorage.getItem("spotify_refresh_token");
     const expiresAt = localStorage.getItem("spotify_token_expires_at");
+
+    // Initialize in-memory variables from localStorage
+    userAccessToken = accessToken;
+    userRefreshToken = refreshToken;
+    userTokenExpiresAt = expiresAt ? parseInt(expiresAt) : 0;
 
     console.log("Tokens encontrados:", {
       accessToken: accessToken ? "presente" : "ausente",
@@ -87,7 +104,8 @@ export async function getUserAccessToken() {
       logToStorage("Token não encontrado ou expirado");
 
       // Se temos refresh token, tentamos renovar
-      if (refreshToken) {
+      const refreshTokenToUse = userRefreshToken || refreshToken;
+      if (refreshTokenToUse) {
         console.log("Tentando renovar token com refresh token...");
         logToStorage("Tentando renovar token com refresh token...");
 
@@ -101,7 +119,7 @@ export async function getUserAccessToken() {
           },
           body: new URLSearchParams({
             grant_type: "refresh_token",
-            refresh_token: refreshToken,
+            refresh_token: refreshTokenToUse,
           }),
         });
 
@@ -111,6 +129,10 @@ export async function getUserAccessToken() {
           localStorage.removeItem("spotify_access_token");
           localStorage.removeItem("spotify_refresh_token");
           localStorage.removeItem("spotify_token_expires_at");
+          // Clear in-memory variables
+          userAccessToken = null;
+          userRefreshToken = null;
+          userTokenExpiresAt = 0;
           return null;
         }
 
@@ -118,14 +140,19 @@ export async function getUserAccessToken() {
         console.log("Token renovado com sucesso");
         logToStorage("Token renovado com sucesso");
 
+        // Update both localStorage and in-memory variables
         localStorage.setItem("spotify_access_token", data.access_token);
         if (data.refresh_token) {
           localStorage.setItem("spotify_refresh_token", data.refresh_token);
+          userRefreshToken = data.refresh_token;
         }
+        const newExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
         localStorage.setItem(
           "spotify_token_expires_at",
-          (Date.now() + data.expires_in * 1000).toString()
+          newExpiresAt.toString()
         );
+        userAccessToken = data.access_token;
+        userTokenExpiresAt = newExpiresAt;
 
         return data.access_token;
       }
@@ -253,18 +280,20 @@ export async function handleCallback(code, state) {
     console.log("Token obtido com sucesso");
     logToStorage("Token obtido com sucesso");
 
+    // Calculate expiration time (current time + expires_in - 60 seconds buffer)
+    const expiresAt = Date.now() + (data.expires_in - 60) * 1000;
+    console.log("Token expira em:", new Date(expiresAt).toLocaleString());
+    logToStorage(`Token expira em: ${new Date(expiresAt).toLocaleString()}`);
+
     // Store tokens in localStorage
     localStorage.setItem("spotify_access_token", data.access_token);
     localStorage.setItem("spotify_refresh_token", data.refresh_token);
-    localStorage.setItem(
-      "spotify_token_expires_at",
-      Date.now() + (data.expires_in - 60) * 1000
-    );
+    localStorage.setItem("spotify_token_expires_at", expiresAt.toString());
 
     // Update in-memory tokens
     userAccessToken = data.access_token;
     userRefreshToken = data.refresh_token;
-    userTokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
+    userTokenExpiresAt = expiresAt;
 
     // Limpar o state após uso
     localStorage.removeItem("spotify_auth_state");

@@ -49,6 +49,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { MdMusicNote } from 'react-icons/md';
 import { FaSpotify } from 'react-icons/fa';
 import { syncPlaylist } from '../spotifyPlaylistSync';
+import { getAuthUrl } from "../spotifyServer";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
@@ -389,12 +390,11 @@ const Dashboard = () => {
 
   const handleSyncPlaylist = async () => {
     try {
-      console.log('Iniciando sincronização da playlist...');
       setIsSyncing(true);
       
       toast({
         title: 'Sincronizando playlist...',
-        description: 'Aguarde enquanto sincronizamos as músicas.',
+        description: 'Aguarde enquanto sincronizamos as músicas sugeridas com a playlist do Spotify',
         status: 'info',
         duration: null,
         isClosable: false,
@@ -409,6 +409,8 @@ const Dashboard = () => {
       if (!result.success) {
         if (result.needsAuth) {
           console.log('Autenticação necessária, redirecionando...');
+          const authUrl = getAuthUrl();
+          window.location.href = authUrl;
           return;
         }
         

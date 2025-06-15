@@ -37,7 +37,7 @@ import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { FaSpotify } from 'react-icons/fa'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
-import { searchSpotify, handleCallback } from './spotifyServer'
+import { searchSpotify } from './spotifyServer'
 
 // Import Georama font
 import '@fontsource/georama'
@@ -120,110 +120,81 @@ const theme = extendTheme({
 })
 
 // Callback component to handle Spotify authentication
-function SpotifyCallback() {
+function SpotifyCallback({ renderInitialEmailScreen }) {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        console.log('Iniciando processamento do callback do Spotify...');
-        logToStorage('Iniciando processamento do callback do Spotify...');
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    const state = params.get('state');
 
-        // Verificar se estamos na rota /callback
-        const isCallbackRoute = window.location.pathname === '/callback';
-        console.log('Rota atual:', window.location.pathname);
-        logToStorage(`Rota atual: ${window.location.pathname}`);
+    // Only handle callback if we have code and state
+    if (code && state) {
+      handleCallback();
+    }
+  }, [location]);
 
-        // Se não estamos na rota /callback mas temos o código, redirecionar para /callback
-        if (!isCallbackRoute) {
-          const params = new URLSearchParams(window.location.search);
-          const code = params.get('code');
-          const state = params.get('state');
-          
-          if (code && state) {
-            console.log('Código encontrado na URL base, redirecionando para /callback...');
-            logToStorage('Código encontrado na URL base, redirecionando para /callback...');
-            navigate(`/callback?code=${code}&state=${state}`);
-            return;
-          }
-        }
+  const handleCallback = async () => {
+    try {
+      console.log('Iniciando processamento do callback do Spotify...');
+      logToStorage('Iniciando processamento do callback do Spotify...');
 
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const state = params.get('state');
-        const error = params.get('error');
-        
-        console.log('Parâmetros recebidos:', { 
-          code: code ? 'presente' : 'ausente', 
-          state: state ? 'presente' : 'ausente',
-          error: error || 'ausente'
-        });
-        logToStorage(`Parâmetros recebidos: code=${code ? 'presente' : 'ausente'}, state=${state ? 'presente' : 'ausente'}, error=${error || 'ausente'}`);
-        
-        if (error) {
-          throw new Error(`Erro na autenticação do Spotify: ${error}`);
-        }
-        
-        if (!code || !state) {
-          throw new Error('Código ou state não encontrados na URL');
-        }
-        
-        console.log('Código e state recebidos, processando callback...');
-        logToStorage('Código e state recebidos, processando callback...');
+      // Get code and state from URL parameters
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const state = params.get('state');
 
-        const result = await handleCallback(code, state);
-        console.log('Resultado do callback:', result);
-        logToStorage(`Resultado do callback: ${JSON.stringify(result)}`);
-
-        if (result.success) {
-          console.log('Autenticação bem-sucedida, tokens armazenados');
-          logToStorage('Autenticação bem-sucedida, tokens armazenados');
-          
-          // Limpar parâmetros da URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          toast({
-            title: 'Autenticação concluída',
-            description: 'Você foi autenticado com sucesso!',
-            status: 'success',
-            duration: 5000,
-            isClosable: true,
-          });
-
-          const returnTo = localStorage.getItem('spotify_return_to') || '/';
-          localStorage.removeItem('spotify_return_to');
-          navigate(returnTo);
-        }
-      } catch (error) {
-        console.error('Error handling Spotify callback:', error);
-        logToStorage(`Erro no callback do Spotify: ${error.message}`, 'error');
-        toast({
-          title: 'Erro na autenticação',
-          description: error.message,
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+      if (!code || !state) {
+        console.log('Código ou state não encontrados na URL');
+        logToStorage('Código ou state não encontrados na URL');
         navigate('/');
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
-    handleCallback();
-  }, [navigate, toast]);
+      console.log('Código e state recebidos, processando callback...');
+      logToStorage('Código e state recebidos, processando callback...');
 
-  if (isLoading) {
+      const result = await handleCallback(code, state);
+      console.log('Resultado do callback:', result);
+      logToStorage(`Resultado do callback: ${JSON.stringify(result)}`);
+
+      // Get the return path from localStorage
+      const returnTo = localStorage.getItem('spotify_return_to') || '/admin';
+      console.log('Redirecionando para:', returnTo);
+      logToStorage(`Redirecionando para: ${returnTo}`);
+
+      // Clear the return path
+      localStorage.removeItem('spotify_return_to');
+
+      // Redirect to the return path
+      navigate(returnTo);
+    } catch (error) {
+      console.error('Error handling Spotify callback:', error);
+      logToStorage(`Erro no callback do Spotify: ${error.message}`, 'error');
+      navigate('/');
+    }
+  };
+
+  // If we don't have code and state, render the main content
+  const params = new URLSearchParams(location.search);
+  if (!params.get('code') || !params.get('state')) {
     return (
-      <Center h="100vh">
-        <Spinner size="xl" color="green.500" />
-      </Center>
+      <Container maxW="container.xl" py={8}>
+        {renderInitialEmailScreen()}
+      </Container>
     );
   }
 
-  return null;
+  // Show loading state while processing callback
+  return (
+    <Center h="100vh">
+      <VStack spacing={4}>
+        <Spinner size="xl" color="brand.400" />
+        <Text>Processando autenticação do Spotify...</Text>
+      </VStack>
+    </Center>
+  );
 }
 
 function App() {
@@ -776,21 +747,16 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
         </VStack>
       </Box>
     </VStack>
-  )
+  );
 
   return (
     <ChakraProvider theme={theme}>
       <Router>
         <Routes>
           {/* Rota de callback deve vir primeiro */}
-          <Route path="/callback" element={<SpotifyCallback />} />
+          <Route path="/" element={<SpotifyCallback renderInitialEmailScreen={renderInitialEmailScreen} />} />
           
           {/* Rotas principais */}
-          <Route path="/" element={
-            <Container maxW="container.xl" py={8}>
-              {renderInitialEmailScreen()}
-            </Container>
-          } />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<Dashboard />} />
           
