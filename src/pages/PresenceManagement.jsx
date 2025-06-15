@@ -21,7 +21,13 @@ import {
   useColorModeValue,
   Skeleton,
   SkeletonText,
+  Image,
+  VStack,
+  HStack,
+  Link,
+  Icon,
 } from '@chakra-ui/react';
+import { FaSpotify } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -68,6 +74,17 @@ const PresenceManagement = () => {
       const data = await response.json();
       
       console.log('Resposta do servidor:', JSON.stringify(data, null, 2));
+      
+      // Debug music suggestions
+      data.forEach(confirmation => {
+        console.log('Confirmation ID:', confirmation.id);
+        console.log('Music Suggestions:', confirmation.music_suggestions);
+        if (confirmation.music_suggestions) {
+          confirmation.music_suggestions.forEach(suggestion => {
+            console.log('Album Image URL:', suggestion.album_image_url);
+          });
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Erro ${response.status}: ${data.message || 'Erro desconhecido'}`);
@@ -163,6 +180,83 @@ const PresenceManagement = () => {
     </Stat>
   );
 
+  const MusicSuggestionCard = ({ suggestion }) => {
+    console.log('Rendering MusicSuggestionCard with suggestion:', suggestion);
+    return (
+      <Box
+        p={4}
+        borderWidth="1px"
+        borderRadius="lg"
+        bg={bgColor}
+        borderColor={borderColor}
+        width="100%"
+      >
+        <HStack spacing={4}>
+          <Box 
+            width="100px" 
+            height="100px" 
+            bg="gray.100" 
+            borderRadius="md" 
+            display="flex" 
+            alignItems="center" 
+            justifyContent="center"
+            overflow="hidden"
+          >
+            {suggestion.album_image_url ? (
+              <Image
+                src={suggestion.album_image_url}
+                alt={`${suggestion.song_title} album cover`}
+                boxSize="100px"
+                objectFit="cover"
+                fallback={
+                  <Box 
+                    p={2} 
+                    textAlign="center" 
+                    color="gray.500"
+                    fontSize="xs"
+                  >
+                    Sem imagem
+                  </Box>
+                }
+                onError={(e) => {
+                  console.error('Error loading image:', suggestion.album_image_url);
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              <Box 
+                p={2} 
+                textAlign="center" 
+                color="gray.500"
+                fontSize="xs"
+              >
+                Sem imagem
+              </Box>
+            )}
+          </Box>
+          <VStack align="start" spacing={1}>
+            <Text fontWeight="bold" color={textColor}>{suggestion.song_title}</Text>
+            <Text color={textColor}>{suggestion.artist}</Text>
+            {suggestion.album_name && (
+              <Text fontSize="sm" color={textColor}>{suggestion.album_name}</Text>
+            )}
+            {suggestion.spotify_url && (
+              <Link href={suggestion.spotify_url} isExternal>
+                <HStack spacing={1}>
+                  <Icon as={FaSpotify} color="green.500" />
+                  <Text fontSize="sm" color="green.500">Abrir no Spotify</Text>
+                </HStack>
+              </Link>
+            )}
+            <Text fontSize="xs" color="gray.500">
+              URL da imagem: {suggestion.album_image_url || 'Não disponível'}
+            </Text>
+          </VStack>
+        </HStack>
+      </Box>
+    );
+  };
+
   return (
     <Container maxW="container.xl" py={8}>
       <Heading mb={6} color={textColor}>Gerenciamento de Confirmações</Heading>
@@ -227,6 +321,7 @@ const PresenceManagement = () => {
                     <Th color={textColor}>Telefone</Th>
                     <Th color={textColor}>Status</Th>
                     <Th color={textColor}>Data de Criação</Th>
+                    <Th color={textColor}>Sugestões Musicais</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -258,6 +353,17 @@ const PresenceManagement = () => {
                       </Td>
                       <Td color={textColor}>
                         {new Date(confirmation.created_at).toLocaleDateString('pt-BR')}
+                      </Td>
+                      <Td>
+                        <VStack spacing={2} align="start">
+                          {confirmation.music_suggestions?.length > 0 ? (
+                            confirmation.music_suggestions.map((suggestion) => (
+                              <MusicSuggestionCard key={suggestion.id} suggestion={suggestion} />
+                            ))
+                          ) : (
+                            <Text color="gray.500" fontSize="sm">Nenhuma sugestão musical</Text>
+                          )}
+                        </VStack>
                       </Td>
                     </Tr>
                   ))}

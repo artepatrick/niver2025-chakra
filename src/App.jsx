@@ -505,7 +505,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
           40 anos da Carol
         </Heading>
         <Text fontSize="2xl" color="white" fontWeight="500">
-          Confirme sua presença!
+          Confirme sua presença e dos acompanhantes!
         </Text>
       </VStack>
 
