@@ -632,10 +632,10 @@ const Dashboard = () => {
                             overflow="hidden"
                             position="relative"
                           >
-                            {music.image_url ? (
+                            {music.album_image_url && (
                               <Image
-                                src={music.image_url}
-                                alt={`Capa do álbum ${music.album_name || music.song_title}`}
+                                src={music.album_image_url}
+                                alt={`Capa do álbum ${music.album_name}`}
                                 boxSize="80px"
                                 objectFit="cover"
                                 fallback={
@@ -651,17 +651,6 @@ const Dashboard = () => {
                                   </Box>
                                 }
                               />
-                            ) : (
-                              <Box 
-                                w="80px" 
-                                h="80px" 
-                                bg="gray.600" 
-                                display="flex" 
-                                alignItems="center" 
-                                justifyContent="center"
-                              >
-                                <Icon as={TimeIcon} color="brand.400" boxSize={8} />
-                              </Box>
                             )}
                           </Box>
                           <VStack align="start" spacing={1} flex={1}>
@@ -790,9 +779,9 @@ const Dashboard = () => {
                           _hover={{ bg: 'gray.500' }}
                         >
                           <HStack spacing={3}>
-                            {music.image_url && (
+                            {music.album_image_url && (
                               <Image
-                                src={music.image_url}
+                                src={music.album_image_url}
                                 alt={`Capa do álbum ${music.album_name}`}
                                 boxSize="50px"
                                 objectFit="cover"
