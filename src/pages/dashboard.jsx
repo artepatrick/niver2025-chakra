@@ -599,15 +599,22 @@ const Dashboard = () => {
           </TabPanel>
 
           {/* Music Suggestions Panel */}
-          <TabPanel p={0}>
-            <Box 
-              bg="gray.800"
-              borderRadius="xl" 
-              boxShadow="lg" 
-              p={6}
-              border="1px solid"
-              borderColor="gray.700"
-            >
+          <TabPanel>
+            <Box>
+              {/* Spotify Playlist Embed */}
+              <Box mb={8} borderRadius="xl" overflow="hidden">
+                <iframe 
+                  style={{ borderRadius: "12px" }} 
+                  src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                  width="100%" 
+                  height="352" 
+                  frameBorder="0" 
+                  allowFullScreen="" 
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                  loading="lazy"
+                />
+              </Box>
+
               {loading ? (
                 <Box p={4}>
                   <SkeletonText noOfLines={5} spacing={4} />

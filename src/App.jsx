@@ -991,6 +991,20 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                         )}
                       </FormControl>
 
+                      {/* Spotify Playlist Embed */}
+                      <Box mt={4} borderRadius="xl" overflow="hidden">
+                        <iframe 
+                          style={{ borderRadius: "12px" }} 
+                          src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                          width="100%" 
+                          height="352" 
+                          frameBorder="0" 
+                          allowFullScreen="" 
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                          loading="lazy"
+                        />
+                      </Box>
+
                       <Button
                         type="submit"
                         colorScheme="brand"
