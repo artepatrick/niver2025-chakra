@@ -410,6 +410,8 @@ const Dashboard = () => {
         if (result.needsAuth) {
           console.log('Autenticação necessária, redirecionando...');
           const authUrl = getAuthUrl();
+          // Save current state before redirecting
+          localStorage.setItem('spotify_sync_pending', 'true');
           window.location.href = authUrl;
           return;
         }

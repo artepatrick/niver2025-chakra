@@ -1,7 +1,12 @@
 // spotifyServer.js
 // Utilitário para buscar músicas diretamente na API do Spotify
 
-import { logToStorage } from "./utils";
+import {
+  logToStorage,
+  needsSpotifyAuth,
+  clearSpotifyAuth,
+  saveSpotifyAuth,
+} from "./utils";
 
 const SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515";
 const SPOTIFY_CLIENT_SECRET = "f336d02deed4469586576ae2fb3944fa";
@@ -94,7 +99,7 @@ export async function getUserAccessToken() {
     );
 
     // Se não temos token ou ele expirou
-    if (!accessToken || !expiresAt || Date.now() >= parseInt(expiresAt)) {
+    if (needsSpotifyAuth()) {
       console.log("Token não encontrado ou expirado");
       logToStorage("Token não encontrado ou expirado");
 
@@ -121,9 +126,7 @@ export async function getUserAccessToken() {
         if (!response.ok) {
           console.error("Erro ao renovar token:", response.status);
           logToStorage(`Erro ao renovar token: ${response.status}`, "error");
-          localStorage.removeItem("spotify_access_token");
-          localStorage.removeItem("spotify_refresh_token");
-          localStorage.removeItem("spotify_token_expires_at");
+          clearSpotifyAuth();
           // Clear in-memory variables
           userAccessToken = null;
           userRefreshToken = null;
@@ -136,18 +139,9 @@ export async function getUserAccessToken() {
         logToStorage("Token renovado com sucesso");
 
         // Update both localStorage and in-memory variables
-        localStorage.setItem("spotify_access_token", data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem("spotify_refresh_token", data.refresh_token);
-          userRefreshToken = data.refresh_token;
-        }
-        const newExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
-        localStorage.setItem(
-          "spotify_token_expires_at",
-          newExpiresAt.toString()
-        );
+        saveSpotifyAuth(data);
         userAccessToken = data.access_token;
-        userTokenExpiresAt = newExpiresAt;
+        userTokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
 
         return data.access_token;
       }
@@ -297,9 +291,7 @@ export async function handleCallback(code, state) {
         logToStorage(
           "Código de autorização inválido ou já usado, limpando tokens..."
         );
-        localStorage.removeItem("spotify_access_token");
-        localStorage.removeItem("spotify_refresh_token");
-        localStorage.removeItem("spotify_token_expires_at");
+        clearSpotifyAuth();
         userAccessToken = null;
         userRefreshToken = null;
         userTokenExpiresAt = 0;
@@ -314,20 +306,13 @@ export async function handleCallback(code, state) {
     console.log("Token obtido com sucesso");
     logToStorage("Token obtido com sucesso");
 
-    // Calculate expiration time (current time + expires_in - 60 seconds buffer)
-    const expiresAt = Date.now() + (data.expires_in - 60) * 1000;
-    console.log("Token expira em:", new Date(expiresAt).toLocaleString());
-    logToStorage(`Token expira em: ${new Date(expiresAt).toLocaleString()}`);
+    // Save tokens using utility function
+    saveSpotifyAuth(data);
 
-    // Store tokens in localStorage
-    localStorage.setItem("spotify_access_token", data.access_token);
-    localStorage.setItem("spotify_refresh_token", data.refresh_token);
-    localStorage.setItem("spotify_token_expires_at", expiresAt.toString());
-
-    // Update in-memory tokens
+    // Update in-memory variables
     userAccessToken = data.access_token;
     userRefreshToken = data.refresh_token;
-    userTokenExpiresAt = expiresAt;
+    userTokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
 
     // Verificar se os tokens foram salvos
     const savedAccessToken = localStorage.getItem("spotify_access_token");

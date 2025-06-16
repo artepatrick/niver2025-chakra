@@ -150,6 +150,16 @@ export async function syncPlaylist(confirmations) {
     logToStorage(`Erro ao sincronizar playlist: ${error.message}`, "error");
     console.error("Stack trace:", error.stack);
     logToStorage(`Stack trace: ${error.stack}`, "error");
+
+    // Check if the error is due to authentication
+    if (error.message.includes("401") || error.message.includes("403")) {
+      return {
+        success: false,
+        error: "Erro de autenticação com o Spotify",
+        needsAuth: true,
+      };
+    }
+
     throw error;
   }
 }
