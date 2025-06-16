@@ -306,7 +306,7 @@ function App() {
   }
 
   const handleAddMusic = (track) => {
-    if (suggestedMusic.length >= 3) {
+    if (suggestedMusic.length >= 10) {
       setMusicLimitError(true)
       return
     }
@@ -1012,7 +1012,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                           <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
                         </HStack>
                         <Text mb={2} fontSize="lg" color="white">
-                          Sugira até 3 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
+                          Sugira até 10 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
                         </Text>
                         <InputGroup>
                           <InputLeftElement pointerEvents="none">
@@ -1024,7 +1024,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                             placeholder="Busque uma música..."
                             bg="#181818"
                             color="white"
-                            isDisabled={suggestedMusic.length >= 3}
+                            isDisabled={suggestedMusic.length >= 10}
                           />
                           <InputRightElement>
                             {isSearching && <Spinner size="sm" color="brand.500" />}
@@ -1032,7 +1032,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                         </InputGroup>
                         {musicLimitError && (
                           <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
-                            Limite de 3 músicas atingido.
+                            Limite de 10 músicas atingido.
                           </Text>
                         )}
                         {searchResults.length > 0 && (
