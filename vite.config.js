@@ -9,7 +9,7 @@ export default defineConfig({
     port: 5173,
     host: true,
     strictPort: true,
-    // Handle all routes through index.html for client-side routing
-    historyApiFallback: true,
   },
+  // Handle all routes through index.html for client-side routing
+  appType: "spa",
 });
