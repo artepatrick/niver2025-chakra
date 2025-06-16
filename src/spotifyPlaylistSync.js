@@ -2,6 +2,7 @@
 // Utilitário para sincronizar a playlist do Spotify com as sugestões de música confirmadas
 
 import { getUserAccessToken } from "./spotifyServer";
+import { logToStorage } from "./utils";
 
 const PLAYLIST_ID = "3885YwVwdWiLefIxZfmu3d";
 const BATCH_SIZE = 50; // Spotify API limit for adding tracks
@@ -74,13 +75,6 @@ async function addTracksToPlaylist(trackIds) {
   }
 }
 
-// Utilitário para gravar logs no localStorage
-function logToStorage(message, type = "log") {
-  const logs = JSON.parse(localStorage.getItem("sync_logs") || "[]");
-  logs.push({ type, message, timestamp: new Date().toISOString() });
-  localStorage.setItem("sync_logs", JSON.stringify(logs));
-}
-
 /**
  * Sincroniza a playlist com as sugestões de música confirmadas
  * @param {Array} confirmations - Array com as confirmações de presença
@@ -124,7 +118,10 @@ export async function syncPlaylist(confirmations) {
 
     // Filtra apenas as músicas que ainda não estão na playlist
     const tracksToAdd = suggestedTracks
-      .filter((track) => !playlistTracks.includes(track.spotify_id))
+      .filter((track) => {
+        const spotifyId = track.spotify_id;
+        return !playlistTracks.includes(spotifyId);
+      })
       .map((track) => track.spotify_id);
 
     console.log("Músicas a serem adicionadas:", tracksToAdd.length);

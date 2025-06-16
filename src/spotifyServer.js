@@ -1,12 +1,7 @@
 // spotifyServer.js
 // Utilitário para buscar músicas diretamente na API do Spotify
 
-// Utilitário para gravar logs no localStorage
-function logToStorage(message, type = "log") {
-  const logs = JSON.parse(localStorage.getItem("sync_logs") || "[]");
-  logs.push({ type, message, timestamp: new Date().toISOString() });
-  localStorage.setItem("sync_logs", JSON.stringify(logs));
-}
+import { logToStorage } from "./utils";
 
 const SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515";
 const SPOTIFY_CLIENT_SECRET = "f336d02deed4469586576ae2fb3944fa";

@@ -38,16 +38,10 @@ import { FaSpotify } from 'react-icons/fa'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
 import { searchSpotify, handleCallback as handleSpotifyCallback } from './spotifyServer'
+import { logToStorage } from './utils'
 
 // Import Georama font
 import '@fontsource/georama'
-
-// Utilitário para gravar logs no localStorage
-function logToStorage(message, type = 'log') {
-  const logs = JSON.parse(localStorage.getItem('sync_logs') || '[]');
-  logs.push({ type, message, timestamp: new Date().toISOString() });
-  localStorage.setItem('sync_logs', JSON.stringify(logs));
-}
 
 const EVENT_DATE = new Date('2025-06-28T16:00:00')
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
