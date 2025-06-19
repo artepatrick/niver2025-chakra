@@ -10,9 +10,30 @@ import {
 
 const SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515";
 const SPOTIFY_CLIENT_SECRET = "f336d02deed4469586576ae2fb3944fa";
-const REDIRECT_URI = import.meta.env.DEV
-  ? "http://127.0.0.1:5173/callback"
-  : "https://beta-niver2025.netlify.app/callback";
+
+// Configuração da URL de redirecionamento baseada no ambiente
+const getRedirectUri = () => {
+  if (import.meta.env.DEV) {
+    return "http://127.0.0.1:5173/callback";
+  }
+
+  // Para produção, sempre usar a URL configurada no Spotify Developer Dashboard
+  // A URL https://niver2025.netlify.app/callback está configurada no Spotify
+  return "https://niver2025.netlify.app/callback";
+};
+
+const REDIRECT_URI = getRedirectUri();
+
+// Log da configuração para debug
+console.log("Spotify Configuration:", {
+  clientId: SPOTIFY_CLIENT_ID,
+  redirectUri: REDIRECT_URI,
+  isDev: import.meta.env.DEV,
+  hostname: typeof window !== "undefined" ? window.location.hostname : "server",
+  currentUrl: typeof window !== "undefined" ? window.location.href : "server",
+  env: import.meta.env,
+  mode: import.meta.env.MODE,
+});
 
 // Tokens para autenticação do app (client credentials)
 let appAccessToken = null;
@@ -169,6 +190,7 @@ export function getAuthUrl() {
       origin: window.location.origin,
       href: window.location.href,
       pathname: window.location.pathname,
+      isDev: import.meta.env.DEV,
     });
     logToStorage(
       `Ambiente: ${JSON.stringify({
@@ -176,6 +198,7 @@ export function getAuthUrl() {
         origin: window.location.origin,
         href: window.location.href,
         pathname: window.location.pathname,
+        isDev: import.meta.env.DEV,
       })}`
     );
 
