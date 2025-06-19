@@ -119,6 +119,8 @@ function SpotifyCallback() {
   const navigate = useNavigate();
   const location = useLocation();
   const hasProcessed = useRef(false);
+  const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -131,11 +133,13 @@ function SpotifyCallback() {
     // Only handle callback if we have code and state and haven't processed yet
     if (code && state && !hasProcessed.current) {
       hasProcessed.current = true;
+      setIsProcessing(true);
       handleCallback(code, state);
     } else if (!code || !state) {
       console.log('No code or state found, redirecting to home');
       logToStorage('No code or state found, redirecting to home');
-      navigate('/');
+      setError('Código de autorização ou state não encontrados na URL');
+      setTimeout(() => navigate('/'), 3000);
     }
   }, [location]);
 
@@ -147,26 +151,32 @@ function SpotifyCallback() {
       if (!code || !state) {
         console.log('Código ou state não encontrados na URL');
         logToStorage('Código ou state não encontrados na URL');
-        navigate('/');
+        setError('Código ou state não encontrados na URL');
+        setTimeout(() => navigate('/'), 3000);
         return;
       }
 
       // Verify state before proceeding
       const savedState = localStorage.getItem('spotify_auth_state');
       console.log('State salvo:', savedState);
-      logToStorage(`State salvo: ${savedState}`);
+      console.log('State recebido:', state);
+      logToStorage(`State salvo: ${savedState}, State recebido: ${state}`);
 
       if (!savedState) {
-        console.error('State não encontrado no localStorage');
-        logToStorage('State não encontrado no localStorage', 'error');
-        navigate('/');
+        const errorMsg = 'State não encontrado no localStorage';
+        console.error(errorMsg);
+        logToStorage(errorMsg, 'error');
+        setError(errorMsg);
+        setTimeout(() => navigate('/'), 3000);
         return;
       }
 
       if (state !== savedState) {
-        console.error('State mismatch - possível ataque CSRF');
-        logToStorage('State mismatch - possível ataque CSRF', 'error');
-        navigate('/');
+        const errorMsg = 'State mismatch - possível ataque CSRF';
+        console.error(errorMsg);
+        logToStorage(errorMsg, 'error');
+        setError(errorMsg);
+        setTimeout(() => navigate('/'), 3000);
         return;
       }
 
@@ -203,25 +213,149 @@ function SpotifyCallback() {
     } catch (error) {
       console.error('Error handling Spotify callback:', error);
       logToStorage(`Erro no callback do Spotify: ${error.message}`, 'error');
+      setError(`Erro no processamento: ${error.message}`);
       
       // If we get an invalid_grant error, redirect to home and show error
       if (error.message.includes('invalid_grant')) {
-        navigate('/', { 
-          state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' },
-          replace: true
-        });
+        setTimeout(() => {
+          navigate('/', { 
+            state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' },
+            replace: true
+          });
+        }, 3000);
       } else {
-        navigate('/', { replace: true });
+        setTimeout(() => navigate('/', { replace: true }), 3000);
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   // Show loading state while processing callback
   return (
-    <Center h="100vh">
-      <VStack spacing={4}>
-        <Spinner size="xl" color="brand.400" />
-        <Text>Processando autenticação do Spotify...</Text>
+    <Center h="100vh" bg="#0A0A0A">
+      <VStack spacing={6} p={8} bg="#181818" borderRadius="xl" boxShadow="xl">
+        {error ? (
+          <>
+            <Text color="red.400" fontSize="lg" fontWeight="600" textAlign="center">
+              Erro na autenticação
+            </Text>
+            <Text color="white" fontSize="md" textAlign="center">
+              {error}
+            </Text>
+            <Text color="gray.400" fontSize="sm" textAlign="center">
+              Redirecionando em 3 segundos...
+            </Text>
+          </>
+        ) : (
+          <>
+            <Spinner size="xl" color="brand.400" />
+            <Text color="white" fontSize="lg" fontWeight="600">
+              Processando autenticação do Spotify...
+            </Text>
+            {isProcessing && (
+              <Text color="gray.400" fontSize="sm" textAlign="center">
+                Aguarde, isso pode levar alguns segundos
+              </Text>
+            )}
+          </>
+        )}
+      </VStack>
+    </Center>
+  );
+}
+
+// Debug component to check localStorage state
+function DebugSpotify() {
+  const [debugInfo, setDebugInfo] = useState({});
+
+  useEffect(() => {
+    const info = {
+      spotify_auth_state: localStorage.getItem('spotify_auth_state'),
+      spotify_access_token: localStorage.getItem('spotify_access_token') ? 'present' : 'absent',
+      spotify_refresh_token: localStorage.getItem('spotify_refresh_token') ? 'present' : 'absent',
+      spotify_token_expires_at: localStorage.getItem('spotify_token_expires_at'),
+      spotify_return_to: localStorage.getItem('spotify_return_to'),
+      spotify_sync_pending: localStorage.getItem('spotify_sync_pending'),
+      spotifyLogs: JSON.parse(localStorage.getItem('spotifyLogs') || '[]').slice(-5), // Last 5 logs
+    };
+    setDebugInfo(info);
+  }, []);
+
+  const clearAll = () => {
+    localStorage.removeItem('spotify_auth_state');
+    localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_refresh_token');
+    localStorage.removeItem('spotify_token_expires_at');
+    localStorage.removeItem('spotify_return_to');
+    localStorage.removeItem('spotify_sync_pending');
+    localStorage.removeItem('spotifyLogs');
+    window.location.reload();
+  };
+
+  return (
+    <Center h="100vh" bg="#0A0A0A">
+      <VStack spacing={6} p={8} bg="#181818" borderRadius="xl" boxShadow="xl" maxW="600px" w="full">
+        <Heading color="brand.400" size="lg">Debug Spotify Auth</Heading>
+        
+        <VStack spacing={4} w="full" align="stretch">
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>State:</Text>
+            <Text color="gray.300" fontFamily="mono" fontSize="sm">
+              {debugInfo.spotify_auth_state || 'null'}
+            </Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Access Token:</Text>
+            <Text color="gray.300">{debugInfo.spotify_access_token}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Refresh Token:</Text>
+            <Text color="gray.300">{debugInfo.spotify_refresh_token}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Expires At:</Text>
+            <Text color="gray.300" fontFamily="mono" fontSize="sm">
+              {debugInfo.spotify_token_expires_at ? 
+                new Date(parseInt(debugInfo.spotify_token_expires_at)).toLocaleString() : 
+                'null'
+              }
+            </Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Return To:</Text>
+            <Text color="gray.300">{debugInfo.spotify_return_to || 'null'}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Sync Pending:</Text>
+            <Text color="gray.300">{debugInfo.spotify_sync_pending || 'null'}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Recent Logs:</Text>
+            <VStack align="stretch" spacing={1}>
+              {debugInfo.spotifyLogs?.map((log, index) => (
+                <Text key={index} color="gray.300" fontSize="xs" fontFamily="mono">
+                  {new Date(log.timestamp).toLocaleTimeString()}: {log.message}
+                </Text>
+              ))}
+            </VStack>
+          </Box>
+        </VStack>
+        
+        <HStack spacing={4}>
+          <Button colorScheme="red" onClick={clearAll}>
+            Clear All Data
+          </Button>
+          <Button colorScheme="brand" onClick={() => window.location.href = '/'}>
+            Go Home
+          </Button>
+        </HStack>
       </VStack>
     </Center>
   );
@@ -684,6 +818,9 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
         <Routes>
           {/* Rota de callback deve vir primeiro */}
           <Route path="/callback" element={<SpotifyCallback />} />
+          
+          {/* Debug route */}
+          <Route path="/debug" element={<DebugSpotify />} />
           
           {/* Rotas principais */}
           <Route path="/dashboard" element={<Dashboard />} />
