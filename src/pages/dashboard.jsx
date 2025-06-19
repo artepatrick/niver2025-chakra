@@ -453,7 +453,7 @@ const Dashboard = () => {
   const fetchConfirmations = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/api/niver2025/confirmations`);
+      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
       const data = await response.json();
       
       if (data.code === 200) {
