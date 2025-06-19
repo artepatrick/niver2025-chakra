@@ -48,7 +48,8 @@ import { EditIcon, CheckIcon, CloseIcon, TimeIcon, DeleteIcon } from '@chakra-ui
 import { Link as RouterLink } from 'react-router-dom';
 import { MdMusicNote } from 'react-icons/md';
 import { FaSpotify } from 'react-icons/fa';
-import { syncPlaylist, getAuthUrl } from '../spotifyPlaylistSync';
+import { syncPlaylist } from '../spotifyPlaylistSync';
+import { getAuthUrl } from '../spotifyServer';
 import { logToStorage } from '../utils';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
