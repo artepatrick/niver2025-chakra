@@ -108,6 +108,17 @@ export async function syncPlaylist(confirmations) {
 
     console.log("Músicas sugeridas encontradas:", suggestedTracks.length);
     logToStorage(`Músicas sugeridas encontradas: ${suggestedTracks.length}`);
+    console.log(
+      "Detalhes das músicas sugeridas:",
+      JSON.stringify(suggestedTracks, null, 2)
+    );
+    logToStorage(
+      `Detalhes das músicas sugeridas: ${JSON.stringify(
+        suggestedTracks,
+        null,
+        2
+      )}`
+    );
 
     // Obtém as músicas já na playlist
     console.log("Obtendo músicas da playlist...");
@@ -115,17 +126,44 @@ export async function syncPlaylist(confirmations) {
     const playlistTracks = await getPlaylistTracks();
     console.log("Músicas na playlist:", playlistTracks.length);
     logToStorage(`Músicas na playlist: ${playlistTracks.length}`);
+    console.log(
+      "IDs das músicas na playlist:",
+      JSON.stringify(playlistTracks, null, 2)
+    );
+    logToStorage(
+      `IDs das músicas na playlist: ${JSON.stringify(playlistTracks, null, 2)}`
+    );
 
     // Filtra apenas as músicas que ainda não estão na playlist
     const tracksToAdd = suggestedTracks
       .filter((track) => {
         const spotifyId = track.spotify_id;
-        return !playlistTracks.includes(spotifyId);
+        const isNew = !playlistTracks.includes(spotifyId);
+        if (!isNew) {
+          console.log(
+            `Música já existe na playlist: ${track.song_title} (${track.artist})`
+          );
+          logToStorage(
+            `Música já existe na playlist: ${track.song_title} (${track.artist})`
+          );
+        }
+        return isNew;
       })
       .map((track) => track.spotify_id);
 
     console.log("Músicas a serem adicionadas:", tracksToAdd.length);
     logToStorage(`Músicas a serem adicionadas: ${tracksToAdd.length}`);
+    console.log(
+      "IDs das músicas a serem adicionadas:",
+      JSON.stringify(tracksToAdd, null, 2)
+    );
+    logToStorage(
+      `IDs das músicas a serem adicionadas: ${JSON.stringify(
+        tracksToAdd,
+        null,
+        2
+      )}`
+    );
 
     // Adiciona as novas músicas à playlist
     if (tracksToAdd.length > 0) {

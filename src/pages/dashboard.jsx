@@ -44,12 +44,12 @@ import {
   TabPanel,
 } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
-import { EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
+import { EditIcon, CheckIcon, CloseIcon, TimeIcon, DeleteIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 import { MdMusicNote } from 'react-icons/md';
 import { FaSpotify } from 'react-icons/fa';
-import { syncPlaylist } from '../spotifyPlaylistSync';
-import { getAuthUrl } from "../spotifyServer";
+import { syncPlaylist, getAuthUrl } from '../spotifyPlaylistSync';
+import { logToStorage } from '../utils';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
@@ -61,12 +61,11 @@ console.log('BASE_URL:', BASE_URL);
 const Dashboard = () => {
   const [confirmations, setConfirmations] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
     confirmed: 0,
     pending: 0,
-    musicSuggestions: 0,
+    declined: 0,
   });
   const [countdown, setCountdown] = useState({
     days: 0,
@@ -77,59 +76,56 @@ const Dashboard = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedConfirmation, setSelectedConfirmation] = useState(null);
   const toast = useToast();
-  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Add effect to check for shouldSync state
+  useEffect(() => {
+    const shouldSync = location.state?.shouldSync;
+    if (shouldSync && confirmations.length > 0) {
+      console.log('Detectado estado shouldSync, iniciando sincronização...');
+      // Clear the shouldSync state to prevent loops
+      window.history.replaceState({}, document.title);
+      handleSyncPlaylist();
+    }
+  }, [location.state, confirmations.length]);
 
   // Fetch all confirmations with improved error handling
-  const fetchConfirmations = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const responseData = await response.json();
-      
-      if (responseData.code === 200) {
-        setConfirmations(responseData.data);
-        calculateStats(responseData.data);
-      } else {
-        setConfirmations([]);
-        calculateStats([]);
-        throw new Error('Não foi possível carregar as confirmações.');
+  useEffect(() => {
+    const fetchConfirmations = async () => {
+      try {
+        setLoading(true);
+        console.log('Buscando confirmações...');
+        const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar confirmações: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Confirmações recebidas:', data.data?.length || 0);
+        setConfirmations(data.data || []);
+        
+        // Update stats
+        const stats = {
+          total: data.data?.length || 0,
+          confirmed: data.data?.filter(c => c.status === 'confirmado').length || 0,
+          pending: data.data?.filter(c => c.status === 'pendente').length || 0,
+          declined: data.data?.filter(c => c.status === 'cancelado').length || 0,
+        };
+        setStats(stats);
+      } catch (error) {
+        console.error('Erro ao buscar confirmações:', error);
+        toast({
+          title: 'Erro ao carregar dados',
+          description: 'Não foi possível carregar as confirmações. Por favor, tente novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      toast({
-        title: 'Erro ao carregar dados',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Calculate statistics
-  const calculateStats = (data) => {
-    console.log('=== Calculando estatísticas ===');
-    console.log('Dados recebidos:', data);
-    
-    const stats = {
-      total: data.reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      confirmed: data.filter(item => item.status === 'confirmado')
-        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      pending: data.filter(item => item.status === 'pendente' || item.status === 'cancelado')
-        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      musicSuggestions: data.reduce((acc, item) => acc + (Array.isArray(item.music_suggestions) ? item.music_suggestions.length : 0), 0),
     };
-    
-    console.log('Estatísticas calculadas:', stats);
-    setStats(stats);
-  };
+
+    fetchConfirmations();
+  }, []);
 
   // Update countdown timer
   const updateCountdown = () => {
@@ -182,7 +178,6 @@ const Dashboard = () => {
   // Fetch confirmations on component mount
   useEffect(() => {
     checkApiConnection();
-    fetchConfirmations();
   }, []);
 
   // Update confirmation status
@@ -390,65 +385,99 @@ const Dashboard = () => {
 
   const handleSyncPlaylist = async () => {
     try {
-      setIsSyncing(true);
-      
-      toast({
-        title: 'Sincronizando playlist...',
-        description: 'Aguarde enquanto sincronizamos as músicas sugeridas com a playlist do Spotify',
-        status: 'info',
-        duration: null,
-        isClosable: false,
+      console.log("Iniciando sincronização da playlist...");
+      logToStorage("Iniciando sincronização da playlist...");
+
+      // Get only confirmed confirmations
+      const confirmedConfirmations = confirmations.filter(conf => conf.status === "confirmado");
+      console.log("Número de confirmações confirmadas:", confirmedConfirmations.length);
+      logToStorage(`Número de confirmações confirmadas: ${confirmedConfirmations.length}`);
+
+      // Log details of each confirmation
+      confirmedConfirmations.forEach((conf, index) => {
+        console.log(`Confirmação ${index + 1}:`, {
+          names: conf.names,
+          music_suggestions: conf.music_suggestions?.length || 0
+        });
+        logToStorage(`Confirmação ${index + 1}: ${JSON.stringify({
+          names: conf.names,
+          music_suggestions: conf.music_suggestions?.length || 0
+        }, null, 2)}`);
       });
 
-      console.log('Número de confirmações:', confirmations.length);
-      const result = await syncPlaylist(confirmations);
-      console.log('Resultado da sincronização:', result);
-      
-      toast.closeAll();
-      
-      if (!result.success) {
-        if (result.needsAuth) {
-          console.log('Autenticação necessária, redirecionando...');
-          const authUrl = getAuthUrl();
-          // Save current state before redirecting
-          localStorage.setItem('spotify_sync_pending', 'true');
-          window.location.href = authUrl;
-          return;
-        }
-        
-        console.error('Erro na sincronização:', result.error);
+      const result = await syncPlaylist(confirmedConfirmations);
+      console.log("Resultado da sincronização:", result);
+      logToStorage(`Resultado da sincronização: ${JSON.stringify(result, null, 2)}`);
+
+      if (result.success) {
         toast({
-          title: 'Erro ao sincronizar playlist',
-          description: result.error || 'Ocorreu um erro ao sincronizar a playlist',
-          status: 'error',
+          title: "Playlist atualizada",
+          description: `Adicionadas ${result.addedTracks} novas músicas à playlist`,
+          status: "success",
           duration: 5000,
           isClosable: true,
         });
-        return;
+      } else if (result.needsAuth) {
+        console.log("Autenticação necessária, redirecionando...");
+        logToStorage("Autenticação necessária, redirecionando...");
+        // Save current state to localStorage
+        localStorage.setItem("spotify_sync_pending", "true");
+        // Redirect to Spotify auth
+        window.location.href = getAuthUrl();
+      } else {
+        throw new Error(result.error || "Erro desconhecido ao sincronizar playlist");
       }
-      
+    } catch (error) {
+      console.error("Erro ao sincronizar playlist:", error);
+      logToStorage(`Erro ao sincronizar playlist: ${error.message}`, "error");
       toast({
-        title: 'Playlist sincronizada',
-        description: `${result.addedTracks} novas músicas adicionadas à playlist`,
-        status: 'success',
+        title: "Erro",
+        description: "Erro ao sincronizar playlist. Por favor, tente novamente.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
+    }
+  };
+
+  const calculateStats = (confirmations) => {
+    setStats({
+      total: confirmations.length,
+      confirmed: confirmations.filter(c => c.status === 'confirmado').length,
+      pending: confirmations.filter(c => c.status === 'pendente').length,
+      declined: confirmations.filter(c => c.status === 'cancelado').length,
+    });
+  };
+
+  const fetchConfirmations = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${BASE_URL}/api/niver2025/confirmations`);
+      const data = await response.json();
+      
+      if (data.code === 200) {
+        setConfirmations(data.data || []);
+        calculateStats(data.data || []);
+      } else {
+        throw new Error(data.message || 'Erro ao buscar confirmações');
+      }
     } catch (error) {
-      console.error('Error syncing playlist:', error);
-      console.error('Stack trace:', error.stack);
-      toast.closeAll();
+      console.error('Erro ao buscar confirmações:', error);
       toast({
-        title: 'Erro ao sincronizar playlist',
-        description: error.message || 'Ocorreu um erro ao sincronizar a playlist',
+        title: 'Erro',
+        description: 'Erro ao buscar confirmações. Por favor, tente novamente.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
     } finally {
-      setIsSyncing(false);
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConfirmations();
+  }, []);
 
   return (
     <Container maxW="container.xl" py={8}>
@@ -471,7 +500,7 @@ const Dashboard = () => {
             leftIcon={<FaSpotify />}
             colorScheme="green"
             onClick={handleSyncPlaylist}
-            isLoading={isSyncing}
+            isLoading={loading}
             loadingText="Sincronizando..."
           >
             Sincronizar Playlist
@@ -533,7 +562,7 @@ const Dashboard = () => {
               { label: 'Total de Convidados', value: stats.total, color: 'brand.400', bgColor: 'gray.700', borderColor: 'brand.400' },
               { label: 'Confirmados', value: stats.confirmed, color: 'green.400', bgColor: 'gray.700', borderColor: 'green.400' },
               { label: 'Pendentes', value: stats.pending, color: 'yellow.400', bgColor: 'gray.700', borderColor: 'yellow.400' },
-              { label: 'Músicas Sugeridas', value: stats.musicSuggestions, color: 'brand.400', bgColor: 'gray.700', borderColor: 'brand.400' }
+              { label: 'Cancelados', value: stats.declined, color: 'red.400', bgColor: 'gray.700', borderColor: 'red.400' }
             ].map((stat, index) => (
               <Box 
                 key={index}
@@ -561,7 +590,7 @@ const Dashboard = () => {
         </Box>
 
         {/* Tabs */}
-        <Tabs variant="soft-rounded" colorScheme="brand" onChange={(index) => setActiveTab(index)}>
+        <Tabs variant="soft-rounded" colorScheme="brand">
           <TabList mb={4}>
             <Tab 
               fontWeight="bold" 

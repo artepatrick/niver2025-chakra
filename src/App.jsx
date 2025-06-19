@@ -182,8 +182,9 @@ function SpotifyCallback() {
       console.log('Redirecionando para:', returnTo);
       logToStorage(`Redirecionando para: ${returnTo}`);
 
-      // Clear the return path
+      // Clear the return path and state
       localStorage.removeItem('spotify_return_to');
+      localStorage.removeItem('spotify_auth_state');
 
       // Check if we need to continue with sync
       const syncPending = localStorage.getItem('spotify_sync_pending') === 'true';
@@ -191,10 +192,13 @@ function SpotifyCallback() {
         localStorage.removeItem('spotify_sync_pending');
         // Add a small delay to ensure tokens are properly saved
         setTimeout(() => {
-          navigate(returnTo, { state: { shouldSync: true } });
+          navigate(returnTo, { 
+            state: { shouldSync: true },
+            replace: true // Use replace to prevent back button from triggering sync again
+          });
         }, 100);
       } else {
-        navigate(returnTo);
+        navigate(returnTo, { replace: true });
       }
     } catch (error) {
       console.error('Error handling Spotify callback:', error);
@@ -202,9 +206,12 @@ function SpotifyCallback() {
       
       // If we get an invalid_grant error, redirect to home and show error
       if (error.message.includes('invalid_grant')) {
-        navigate('/', { state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' } });
+        navigate('/', { 
+          state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' },
+          replace: true
+        });
       } else {
-        navigate('/');
+        navigate('/', { replace: true });
       }
     }
   };
