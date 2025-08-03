@@ -5,4 +5,9 @@
 
 [build]
   command = "npm run build"
-  publish = "dist" 
+  publish = "dist"
+
+[build.environment]
+  VITE_SPOTIFY_CLIENT_ID = "82045225ac554ca5a10aa806b6ab0515"
+  VITE_SPOTIFY_REDIRECT_URI = "https://niver2025.netlify.app/callback"
+  VITE_API_URL = "https://omnicast-backend.fly.dev" 

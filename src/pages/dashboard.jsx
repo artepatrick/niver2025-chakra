@@ -44,9 +44,13 @@ import {
   TabPanel,
 } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
-import { EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
+import { EditIcon, CheckIcon, CloseIcon, TimeIcon, DeleteIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 import { MdMusicNote } from 'react-icons/md';
+import { FaSpotify } from 'react-icons/fa';
+import { syncPlaylist } from '../spotifyPlaylistSync';
+import { getAuthUrl } from '../spotifyServer';
+import { logToStorage } from '../utils';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
@@ -58,12 +62,11 @@ console.log('BASE_URL:', BASE_URL);
 const Dashboard = () => {
   const [confirmations, setConfirmations] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
     confirmed: 0,
     pending: 0,
-    musicSuggestions: 0,
+    declined: 0,
   });
   const [countdown, setCountdown] = useState({
     days: 0,
@@ -75,57 +78,55 @@ const Dashboard = () => {
   const [selectedConfirmation, setSelectedConfirmation] = useState(null);
   const toast = useToast();
 
-  // Fetch all confirmations with improved error handling
-  const fetchConfirmations = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const responseData = await response.json();
-      
-      if (responseData.code === 200) {
-        setConfirmations(responseData.data);
-        calculateStats(responseData.data);
-      } else {
-        setConfirmations([]);
-        calculateStats([]);
-        throw new Error('Não foi possível carregar as confirmações.');
-      }
-    } catch (error) {
-      toast({
-        title: 'Erro ao carregar dados',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
+  // Add effect to check for shouldSync state
+  useEffect(() => {
+    const shouldSync = location.state?.shouldSync;
+    if (shouldSync && confirmations.length > 0) {
+      console.log('Detectado estado shouldSync, iniciando sincronização...');
+      // Clear the shouldSync state to prevent loops
+      window.history.replaceState({}, document.title);
+      handleSyncPlaylist();
     }
-  };
+  }, [location.state, confirmations.length]);
 
-  // Calculate statistics
-  const calculateStats = (data) => {
-    console.log('=== Calculando estatísticas ===');
-    console.log('Dados recebidos:', data);
-    
-    const stats = {
-      total: data.reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      confirmed: data.filter(item => item.status === 'confirmado')
-        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      pending: data.filter(item => item.status === 'pendente' || item.status === 'cancelado')
-        .reduce((acc, item) => acc + (Array.isArray(item.names) ? item.names.length : 0), 0),
-      musicSuggestions: data.reduce((acc, item) => acc + (Array.isArray(item.music_suggestions) ? item.music_suggestions.length : 0), 0),
+  // Fetch all confirmations with improved error handling
+  useEffect(() => {
+    const fetchConfirmations = async () => {
+      try {
+        setLoading(true);
+        console.log('Buscando confirmações...');
+        const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar confirmações: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Confirmações recebidas:', data.data?.length || 0);
+        setConfirmations(data.data || []);
+        
+        // Update stats
+        const stats = {
+          total: data.data?.length || 0,
+          confirmed: data.data?.filter(c => c.status === 'confirmado').length || 0,
+          pending: data.data?.filter(c => c.status === 'pendente').length || 0,
+          declined: data.data?.filter(c => c.status === 'cancelado').length || 0,
+        };
+        setStats(stats);
+      } catch (error) {
+        console.error('Erro ao buscar confirmações:', error);
+        toast({
+          title: 'Erro ao carregar dados',
+          description: 'Não foi possível carregar as confirmações. Por favor, tente novamente.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    console.log('Estatísticas calculadas:', stats);
-    setStats(stats);
-  };
+
+    fetchConfirmations();
+  }, []);
 
   // Update countdown timer
   const updateCountdown = () => {
@@ -178,7 +179,6 @@ const Dashboard = () => {
   // Fetch confirmations on component mount
   useEffect(() => {
     checkApiConnection();
-    fetchConfirmations();
   }, []);
 
   // Update confirmation status
@@ -384,6 +384,102 @@ const Dashboard = () => {
     }
   };
 
+  const handleSyncPlaylist = async () => {
+    try {
+      console.log("Iniciando sincronização da playlist...");
+      logToStorage("Iniciando sincronização da playlist...");
+
+      // Get only confirmed confirmations
+      const confirmedConfirmations = confirmations.filter(conf => conf.status === "confirmado");
+      console.log("Número de confirmações confirmadas:", confirmedConfirmations.length);
+      logToStorage(`Número de confirmações confirmadas: ${confirmedConfirmations.length}`);
+
+      // Log details of each confirmation
+      confirmedConfirmations.forEach((conf, index) => {
+        console.log(`Confirmação ${index + 1}:`, {
+          names: conf.names,
+          music_suggestions: conf.music_suggestions?.length || 0
+        });
+        logToStorage(`Confirmação ${index + 1}: ${JSON.stringify({
+          names: conf.names,
+          music_suggestions: conf.music_suggestions?.length || 0
+        }, null, 2)}`);
+      });
+
+      const result = await syncPlaylist(confirmedConfirmations);
+      console.log("Resultado da sincronização:", result);
+      logToStorage(`Resultado da sincronização: ${JSON.stringify(result, null, 2)}`);
+
+      if (result.success) {
+        toast({
+          title: "Playlist atualizada",
+          description: `Adicionadas ${result.addedTracks} novas músicas à playlist`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else if (result.needsAuth) {
+        console.log("Autenticação necessária, redirecionando...");
+        logToStorage("Autenticação necessária, redirecionando...");
+        // Save current state to localStorage
+        localStorage.setItem("spotify_sync_pending", "true");
+        // Redirect to Spotify auth
+        window.location.href = getAuthUrl();
+      } else {
+        throw new Error(result.error || "Erro desconhecido ao sincronizar playlist");
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar playlist:", error);
+      logToStorage(`Erro ao sincronizar playlist: ${error.message}`, "error");
+      toast({
+        title: "Erro",
+        description: "Erro ao sincronizar playlist. Por favor, tente novamente.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const calculateStats = (confirmations) => {
+    setStats({
+      total: confirmations.length,
+      confirmed: confirmations.filter(c => c.status === 'confirmado').length,
+      pending: confirmations.filter(c => c.status === 'pendente').length,
+      declined: confirmations.filter(c => c.status === 'cancelado').length,
+    });
+  };
+
+  const fetchConfirmations = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
+      const data = await response.json();
+      
+      if (data.code === 200) {
+        setConfirmations(data.data || []);
+        calculateStats(data.data || []);
+      } else {
+        throw new Error(data.message || 'Erro ao buscar confirmações');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar confirmações:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao buscar confirmações. Por favor, tente novamente.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfirmations();
+  }, []);
+
   return (
     <Container maxW="container.xl" py={8}>
       <Link 
@@ -398,205 +494,219 @@ const Dashboard = () => {
         ← Voltar para a página inicial
       </Link>
       
-      {/* Dashboard Header */}
-      <Box mb={8} p={6} bg="gray.800" borderRadius="xl" boxShadow="lg">
-        <Heading 
-          mb={6} 
-          size="lg" 
-          color="brand.400" 
-          fontWeight="900"
-          textShadow="0 0 20px rgba(167, 139, 250, 0.3)"
-        >
-          Dashboard de Confirmações
-        </Heading>
-        
-        {/* Countdown Timer */}
-        <Box mb={8} p={4} bg="gray.700" borderRadius="lg">
-          <Flex align="center" mb={2}>
-            <Icon as={TimeIcon} color="brand.400" mr={2} />
-            <Text fontSize="lg" fontWeight="bold" color="gray.200">Contagem Regressiva para o Evento</Text>
-          </Flex>
-          <SimpleGrid 
-            columns={{ base: 2, sm: 4 }} 
-            spacing={4}
-            templateColumns={{ base: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" }}
+      <VStack spacing={8} align="stretch">
+        <HStack justify="space-between" align="center">
+          <Heading size="xl" color="brand.400">Dashboard</Heading>
+          <Button
+            leftIcon={<FaSpotify />}
+            colorScheme="green"
+            onClick={handleSyncPlaylist}
+            isLoading={loading}
+            loadingText="Sincronizando..."
           >
+            Sincronizar Playlist
+          </Button>
+        </HStack>
+
+        {/* Dashboard Header */}
+        <Box mb={8} p={6} bg="gray.800" borderRadius="xl" boxShadow="lg">
+          <Heading 
+            mb={6} 
+            size="lg" 
+            color="brand.400" 
+            fontWeight="900"
+            textShadow="0 0 20px rgba(167, 139, 250, 0.3)"
+          >
+            Dashboard de Confirmações
+          </Heading>
+          
+          {/* Countdown Timer */}
+          <Box mb={8} p={4} bg="gray.700" borderRadius="lg">
+            <Flex align="center" mb={2}>
+              <Icon as={TimeIcon} color="brand.400" mr={2} />
+              <Text fontSize="lg" fontWeight="bold" color="gray.200">Contagem Regressiva para o Evento</Text>
+            </Flex>
+            <SimpleGrid 
+              columns={{ base: 2, sm: 4 }} 
+              spacing={4}
+              templateColumns={{ base: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" }}
+            >
+              {[
+                { value: countdown.days, label: 'Dias' },
+                { value: countdown.hours, label: 'Horas' },
+                { value: countdown.minutes, label: 'Minutos' },
+                { value: countdown.seconds, label: 'Segundos' }
+              ].map((item, index) => (
+                <Box 
+                  key={index}
+                  textAlign="center" 
+                  p={3} 
+                  bg="gray.800" 
+                  borderRadius="md" 
+                  boxShadow="sm"
+                  _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
+                >
+                  <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.400">
+                    {item.value}
+                  </Text>
+                  <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">
+                    {item.label}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+          </Box>
+
+          {/* Statistics */}
+          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
             {[
-              { value: countdown.days, label: 'Dias' },
-              { value: countdown.hours, label: 'Horas' },
-              { value: countdown.minutes, label: 'Minutos' },
-              { value: countdown.seconds, label: 'Segundos' }
-            ].map((item, index) => (
+              { label: 'Total de Convidados', value: stats.total, color: 'brand.400', bgColor: 'gray.700', borderColor: 'brand.400' },
+              { label: 'Confirmados', value: stats.confirmed, color: 'green.400', bgColor: 'gray.700', borderColor: 'green.400' },
+              { label: 'Pendentes', value: stats.pending, color: 'yellow.400', bgColor: 'gray.700', borderColor: 'yellow.400' },
+              { label: 'Cancelados', value: stats.declined, color: 'red.400', bgColor: 'gray.700', borderColor: 'red.400' }
+            ].map((stat, index) => (
               <Box 
                 key={index}
-                textAlign="center" 
-                p={3} 
-                bg="gray.800" 
-                borderRadius="md" 
-                boxShadow="sm"
-                _hover={{ transform: 'translateY(-2px)', transition: 'all 0.2s' }}
+                p={5} 
+                bg={stat.bgColor}
+                borderRadius="lg" 
+                boxShadow="lg"
+                border="2px solid"
+                borderColor={stat.borderColor}
+                _hover={{ 
+                  transform: 'translateY(-2px)', 
+                  transition: 'all 0.2s',
+                  boxShadow: `0 0 15px ${stat.borderColor}`
+                }}
               >
-                <Text fontSize={{ base: "xl", sm: "2xl" }} fontWeight="bold" color="brand.400">
-                  {item.value}
-                </Text>
-                <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.300">
-                  {item.label}
-                </Text>
+                <Stat>
+                  <StatLabel fontSize="lg" color="white" fontWeight="medium">{stat.label}</StatLabel>
+                  <StatNumber fontSize="3xl" color={stat.value > 0 ? stat.color : "gray.400"} fontWeight="bold">
+                    {stat.value}
+                  </StatNumber>
+                </Stat>
               </Box>
             ))}
           </SimpleGrid>
         </Box>
 
-        {/* Statistics */}
-        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
-          {[
-            { label: 'Total de Convidados', value: stats.total, color: 'brand.400', bgColor: 'gray.700', borderColor: 'brand.400' },
-            { label: 'Confirmados', value: stats.confirmed, color: 'green.400', bgColor: 'gray.700', borderColor: 'green.400' },
-            { label: 'Pendentes', value: stats.pending, color: 'yellow.400', bgColor: 'gray.700', borderColor: 'yellow.400' },
-            { label: 'Músicas Sugeridas', value: stats.musicSuggestions, color: 'brand.400', bgColor: 'gray.700', borderColor: 'brand.400' }
-          ].map((stat, index) => (
-            <Box 
-              key={index}
-              p={5} 
-              bg={stat.bgColor}
-              borderRadius="lg" 
-              boxShadow="lg"
-              border="2px solid"
-              borderColor={stat.borderColor}
-              _hover={{ 
-                transform: 'translateY(-2px)', 
-                transition: 'all 0.2s',
-                boxShadow: `0 0 15px ${stat.borderColor}`
+        {/* Tabs */}
+        <Tabs variant="soft-rounded" colorScheme="brand">
+          <TabList mb={4}>
+            <Tab 
+              fontWeight="bold" 
+              _selected={{ 
+                color: 'brand.400',
+                bg: 'gray.700',
+                boxShadow: 'none'
+              }}
+              _hover={{
+                bg: 'gray.700'
               }}
             >
-              <Stat>
-                <StatLabel fontSize="lg" color="white" fontWeight="medium">{stat.label}</StatLabel>
-                <StatNumber fontSize="3xl" color={stat.value > 0 ? stat.color : "gray.400"} fontWeight="bold">
-                  {stat.value}
-                </StatNumber>
-              </Stat>
-            </Box>
-          ))}
-        </SimpleGrid>
-      </Box>
-
-      {/* Tabs */}
-      <Tabs variant="soft-rounded" colorScheme="brand" onChange={(index) => setActiveTab(index)}>
-        <TabList mb={4}>
-          <Tab 
-            fontWeight="bold" 
-            _selected={{ 
-              color: 'brand.400',
-              bg: 'gray.700',
-              boxShadow: 'none'
-            }}
-            _hover={{
-              bg: 'gray.700'
-            }}
-          >
-            Convidados
-          </Tab>
-          <Tab 
-            fontWeight="bold"
-            _selected={{ 
-              color: 'brand.400',
-              bg: 'gray.700',
-              boxShadow: 'none'
-            }}
-            _hover={{
-              bg: 'gray.700'
-            }}
-          >
-            Músicas Sugeridas
-          </Tab>
-        </TabList>
-
-        <TabPanels>
-          {/* Guests Panel */}
-          <TabPanel p={0}>
-            <Box 
-              overflowX="auto" 
-              bg="gray.800"
-              borderRadius="xl" 
-              boxShadow="lg" 
-              p={6}
-              border="1px solid"
-              borderColor="gray.700"
+              Convidados
+            </Tab>
+            <Tab 
+              fontWeight="bold"
+              _selected={{ 
+                color: 'brand.400',
+                bg: 'gray.700',
+                boxShadow: 'none'
+              }}
+              _hover={{
+                bg: 'gray.700'
+              }}
             >
-              {loading ? (
-                <Box p={4}>
-                  <SkeletonText noOfLines={5} spacing={4} />
-                </Box>
-              ) : (
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th color="gray.200">Convidados</Th>
-                      <Th color="gray.200">Email</Th>
-                      <Th color="gray.200">Telefone</Th>
-                      <Th color="gray.200">Status</Th>
-                      <Th color="gray.200">Ações</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {confirmations.length > 0 ? (
-                      confirmations.map((confirmation) => (
-                        <Tr key={confirmation.id} _hover={{ bg: 'gray.700' }}>
-                          <Td color="gray.200">{confirmation.names.join(', ')}</Td>
-                          <Td color="gray.200">{confirmation.email}</Td>
-                          <Td color="gray.200">{confirmation.phone}</Td>
-                          <Td>
-                            <Badge colorScheme={getStatusColor(confirmation.status)}>
-                              {confirmation.status}
-                            </Badge>
-                          </Td>
-                          <Td>
-                            <HStack spacing={2}>
-                              <Button
-                                size="sm"
-                                leftIcon={<EditIcon />}
-                                colorScheme="brand"
-                                variant="outline"
-                                onClick={() => handleEdit(confirmation)}
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                size="sm"
-                                colorScheme="green"
-                                leftIcon={<CheckIcon />}
-                                onClick={() => updateStatus(confirmation.id, 'confirmado')}
-                              >
-                                Confirmar
-                              </Button>
-                              <Button
-                                size="sm"
-                                colorScheme="red"
-                                leftIcon={<CloseIcon />}
-                                onClick={() => updateStatus(confirmation.id, 'cancelado')}
-                              >
-                                Cancelar
-                              </Button>
-                            </HStack>
+              Músicas Sugeridas
+            </Tab>
+          </TabList>
+
+          <TabPanels>
+            {/* Guests Panel */}
+            <TabPanel p={0}>
+              <Box 
+                overflowX="auto" 
+                bg="gray.800"
+                borderRadius="xl" 
+                boxShadow="lg" 
+                p={6}
+                border="1px solid"
+                borderColor="gray.700"
+              >
+                {loading ? (
+                  <Box p={4}>
+                    <SkeletonText noOfLines={5} spacing={4} />
+                  </Box>
+                ) : (
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th color="gray.200">Convidados</Th>
+                        <Th color="gray.200">Email</Th>
+                        <Th color="gray.200">Telefone</Th>
+                        <Th color="gray.200">Status</Th>
+                        <Th color="gray.200">Ações</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {confirmations.length > 0 ? (
+                        confirmations.map((confirmation) => (
+                          <Tr key={confirmation.id} _hover={{ bg: 'gray.700' }}>
+                            <Td color="gray.200">{confirmation.names.join(', ')}</Td>
+                            <Td color="gray.200">{confirmation.email}</Td>
+                            <Td color="gray.200">{confirmation.phone}</Td>
+                            <Td>
+                              <Badge colorScheme={getStatusColor(confirmation.status)}>
+                                {confirmation.status}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <HStack spacing={2}>
+                                <Button
+                                  size="sm"
+                                  leftIcon={<EditIcon />}
+                                  colorScheme="brand"
+                                  variant="outline"
+                                  onClick={() => handleEdit(confirmation)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  colorScheme="green"
+                                  leftIcon={<CheckIcon />}
+                                  onClick={() => updateStatus(confirmation.id, 'confirmado')}
+                                >
+                                  Confirmar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  colorScheme="red"
+                                  leftIcon={<CloseIcon />}
+                                  onClick={() => updateStatus(confirmation.id, 'cancelado')}
+                                >
+                                  Cancelar
+                                </Button>
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        ))
+                      ) : (
+                        <Tr>
+                          <Td colSpan={5}>
+                            <Box textAlign="center" py={8}>
+                              <Text fontSize="lg" color="gray.300" fontWeight="medium">
+                                {loading ? 'Carregando confirmações...' : 'Nenhuma confirmação encontrada.'}
+                              </Text>
+                            </Box>
                           </Td>
                         </Tr>
-                      ))
-                    ) : (
-                      <Tr>
-                        <Td colSpan={5}>
-                          <Box textAlign="center" py={8}>
-                            <Text fontSize="lg" color="gray.300" fontWeight="medium">
-                              {loading ? 'Carregando confirmações...' : 'Nenhuma confirmação encontrada.'}
-                            </Text>
-                          </Box>
-                        </Td>
-                      </Tr>
-                    )}
-                  </Tbody>
-                </Table>
-              )}
-            </Box>
-          </TabPanel>
+                      )}
+                    </Tbody>
+                  </Table>
+                )}
+              </Box>
+            </TabPanel>
 
           {/* Music Suggestions Panel */}
           <TabPanel>
@@ -696,139 +806,140 @@ const Dashboard = () => {
         </TabPanels>
       </Tabs>
 
-      {/* Edit Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl">
-        <ModalOverlay bg="blackAlpha.700" />
-        <ModalContent bg="gray.800" color="gray.200">
-          <ModalHeader color="brand.400" fontWeight="900">Editar Confirmação</ModalHeader>
-          <ModalCloseButton color="gray.200" />
-          <ModalBody pb={6}>
-            {selectedConfirmation && (
-              <VStack spacing={4}>
-                <FormControl>
-                  <FormLabel color="gray.200">Nomes</FormLabel>
-                  <Input
-                    bg="gray.700"
-                    color="gray.200"
-                    value={selectedConfirmation.names.join(', ')}
-                    onChange={(e) =>
-                      setSelectedConfirmation({
-                        ...selectedConfirmation,
-                        names: e.target.value.split(',').map((name) => name.trim()),
-                      })
-                    }
-                    _hover={{ borderColor: 'brand.400' }}
-                    _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.200">Email</FormLabel>
-                  <Input
-                    bg="gray.700"
-                    color="gray.200"
-                    value={selectedConfirmation.email}
-                    onChange={(e) =>
-                      setSelectedConfirmation({
-                        ...selectedConfirmation,
-                        email: e.target.value,
-                      })
-                    }
-                    _hover={{ borderColor: 'brand.400' }}
-                    _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.200">Telefone</FormLabel>
-                  <Input
-                    bg="gray.700"
-                    color="gray.200"
-                    value={selectedConfirmation.phone}
-                    onChange={(e) =>
-                      setSelectedConfirmation({
-                        ...selectedConfirmation,
-                        phone: e.target.value,
-                      })
-                    }
-                    _hover={{ borderColor: 'brand.400' }}
-                    _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel color="gray.200">Status</FormLabel>
-                  <Select
-                    bg="gray.700"
-                    color="gray.200"
-                    value={selectedConfirmation.status}
-                    onChange={(e) =>
-                      setSelectedConfirmation({
-                        ...selectedConfirmation,
-                        status: e.target.value,
-                      })
-                    }
-                    _hover={{ borderColor: 'brand.400' }}
-                    _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
-                  >
-                    <option value="pendente">Pendente</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="cancelado">Cancelado</option>
-                  </Select>
-                </FormControl>
-                {selectedConfirmation.music_suggestions && selectedConfirmation.music_suggestions.length > 0 && (
+        {/* Edit Modal */}
+        <Modal isOpen={isOpen} onClose={onClose} size="xl">
+          <ModalOverlay bg="blackAlpha.700" />
+          <ModalContent bg="gray.800" color="gray.200">
+            <ModalHeader color="brand.400" fontWeight="900">Editar Confirmação</ModalHeader>
+            <ModalCloseButton color="gray.200" />
+            <ModalBody pb={6}>
+              {selectedConfirmation && (
+                <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel color="gray.200">Músicas Sugeridas</FormLabel>
-                    <VStack spacing={2} align="stretch" bg="gray.700" p={3} borderRadius="md">
-                      {selectedConfirmation.music_suggestions.map((music) => (
-                        <Box 
-                          key={music.id} 
-                          p={2} 
-                          bg="gray.600" 
-                          borderRadius="sm"
-                          _hover={{ bg: 'gray.500' }}
-                        >
-                          <HStack spacing={3}>
-                            {music.album_image_url && (
-                              <Image
-                                src={music.album_image_url}
-                                alt={`Capa do álbum ${music.album_name}`}
-                                boxSize="50px"
-                                objectFit="cover"
-                                borderRadius="md"
-                              />
-                            )}
-                            <VStack align="start" spacing={1}>
-                              <Text fontWeight="bold" color="brand.400">{music.song_title}</Text>
-                              <Text color="gray.300">{music.artist}</Text>
-                              {music.spotify_url && (
-                                <Link 
-                                  href={music.spotify_url} 
-                                  isExternal 
-                                  color="green.400" 
-                                  fontSize="sm"
-                                  _hover={{ color: 'green.300' }}
-                                >
-                                  Ouvir no Spotify →
-                                </Link>
-                              )}
-                            </VStack>
-                          </HStack>
-                        </Box>
-                      ))}
-                    </VStack>
+                    <FormLabel color="gray.200">Nomes</FormLabel>
+                    <Input
+                      bg="gray.700"
+                      color="gray.200"
+                      value={selectedConfirmation.names.join(', ')}
+                      onChange={(e) =>
+                        setSelectedConfirmation({
+                          ...selectedConfirmation,
+                          names: e.target.value.split(',').map((name) => name.trim()),
+                        })
+                      }
+                      _hover={{ borderColor: 'brand.400' }}
+                      _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
+                    />
                   </FormControl>
-                )}
-                <Button
-                  colorScheme="brand"
-                  width="full"
-                  onClick={() => updateConfirmation(selectedConfirmation)}
-                  _hover={{ bg: 'brand.600' }}
-                >
-                  Salvar Alterações
-                </Button>
-              </VStack>
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+                  <FormControl>
+                    <FormLabel color="gray.200">Email</FormLabel>
+                    <Input
+                      bg="gray.700"
+                      color="gray.200"
+                      value={selectedConfirmation.email}
+                      onChange={(e) =>
+                        setSelectedConfirmation({
+                          ...selectedConfirmation,
+                          email: e.target.value,
+                        })
+                      }
+                      _hover={{ borderColor: 'brand.400' }}
+                      _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel color="gray.200">Telefone</FormLabel>
+                    <Input
+                      bg="gray.700"
+                      color="gray.200"
+                      value={selectedConfirmation.phone}
+                      onChange={(e) =>
+                        setSelectedConfirmation({
+                          ...selectedConfirmation,
+                          phone: e.target.value,
+                        })
+                      }
+                      _hover={{ borderColor: 'brand.400' }}
+                      _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel color="gray.200">Status</FormLabel>
+                    <Select
+                      bg="gray.700"
+                      color="gray.200"
+                      value={selectedConfirmation.status}
+                      onChange={(e) =>
+                        setSelectedConfirmation({
+                          ...selectedConfirmation,
+                          status: e.target.value,
+                        })
+                      }
+                      _hover={{ borderColor: 'brand.400' }}
+                      _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
+                    >
+                      <option value="pendente">Pendente</option>
+                      <option value="confirmado">Confirmado</option>
+                      <option value="cancelado">Cancelado</option>
+                    </Select>
+                  </FormControl>
+                  {selectedConfirmation.music_suggestions && selectedConfirmation.music_suggestions.length > 0 && (
+                    <FormControl>
+                      <FormLabel color="gray.200">Músicas Sugeridas</FormLabel>
+                      <VStack spacing={2} align="stretch" bg="gray.700" p={3} borderRadius="md">
+                        {selectedConfirmation.music_suggestions.map((music) => (
+                          <Box 
+                            key={music.id} 
+                            p={2} 
+                            bg="gray.600" 
+                            borderRadius="sm"
+                            _hover={{ bg: 'gray.500' }}
+                          >
+                            <HStack spacing={3}>
+                              {music.album_image_url && (
+                                <Image
+                                  src={music.album_image_url}
+                                  alt={`Capa do álbum ${music.album_name}`}
+                                  boxSize="50px"
+                                  objectFit="cover"
+                                  borderRadius="md"
+                                />
+                              )}
+                              <VStack align="start" spacing={1}>
+                                <Text fontWeight="bold" color="brand.400">{music.song_title}</Text>
+                                <Text color="gray.300">{music.artist}</Text>
+                                {music.spotify_url && (
+                                  <Link 
+                                    href={music.spotify_url} 
+                                    isExternal 
+                                    color="green.400" 
+                                    fontSize="sm"
+                                    _hover={{ color: 'green.300' }}
+                                  >
+                                    Ouvir no Spotify →
+                                  </Link>
+                                )}
+                              </VStack>
+                            </HStack>
+                          </Box>
+                        ))}
+                      </VStack>
+                    </FormControl>
+                  )}
+                  <Button
+                    colorScheme="brand"
+                    width="full"
+                    onClick={() => updateConfirmation(selectedConfirmation)}
+                    _hover={{ bg: 'brand.600' }}
+                  >
+                    Salvar Alterações
+                  </Button>
+                </VStack>
+              )}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      </VStack>
     </Container>
   );
 };

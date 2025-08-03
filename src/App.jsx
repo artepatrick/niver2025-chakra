@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Container,
@@ -31,12 +31,15 @@ import {
   Badge,
   extendTheme,
   ChakraProvider,
+  Center,
 } from '@chakra-ui/react'
 import { AddIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons'
 import { FaSpotify } from 'react-icons/fa'
-import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
-import { searchSpotify } from './spotifyServer'
+import { searchSpotify, handleCallback as handleSpotifyCallback } from './spotifyServer'
+import { logToStorage } from './utils'
+import MoreInfo from './components/MoreInfo'
 
 // Import Georama font
 import '@fontsource/georama'
@@ -110,6 +113,253 @@ const theme = extendTheme({
     },
   },
 })
+
+// Callback component to handle Spotify authentication
+function SpotifyCallback() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasProcessed = useRef(false);
+  const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+
+    console.log('Callback received:', { code, state });
+    logToStorage(`Callback received: code=${code ? 'present' : 'absent'}, state=${state ? 'present' : 'absent'}`);
+
+    // Only handle callback if we have code and state and haven't processed yet
+    if (code && state && !hasProcessed.current) {
+      hasProcessed.current = true;
+      setIsProcessing(true);
+      handleCallback(code, state);
+    } else if (!code || !state) {
+      console.log('No code or state found, redirecting to home');
+      logToStorage('No code or state found, redirecting to home');
+      setError('Código de autorização ou state não encontrados na URL');
+      setTimeout(() => navigate('/'), 3000);
+    }
+  }, [location]);
+
+  const handleCallback = async (code, state) => {
+    try {
+      console.log('Iniciando processamento do callback do Spotify...');
+      logToStorage('Iniciando processamento do callback do Spotify...');
+
+      if (!code || !state) {
+        console.log('Código ou state não encontrados na URL');
+        logToStorage('Código ou state não encontrados na URL');
+        setError('Código ou state não encontrados na URL');
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+
+      // Verify state before proceeding
+      const savedState = localStorage.getItem('spotify_auth_state');
+      console.log('State salvo:', savedState);
+      console.log('State recebido:', state);
+      logToStorage(`State salvo: ${savedState}, State recebido: ${state}`);
+
+      if (!savedState) {
+        const errorMsg = 'State não encontrado no localStorage';
+        console.error(errorMsg);
+        logToStorage(errorMsg, 'error');
+        setError(errorMsg);
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+
+      if (state !== savedState) {
+        const errorMsg = 'State mismatch - possível ataque CSRF';
+        console.error(errorMsg);
+        logToStorage(errorMsg, 'error');
+        setError(errorMsg);
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+
+      console.log('Código e state recebidos, processando callback...');
+      logToStorage('Código e state recebidos, processando callback...');
+
+      const result = await handleSpotifyCallback(code, state);
+      console.log('Resultado do callback:', result);
+      logToStorage(`Resultado do callback: ${JSON.stringify(result)}`);
+
+      // Get the return path from localStorage
+      const returnTo = localStorage.getItem('spotify_return_to') || '/admin';
+      console.log('Redirecionando para:', returnTo);
+      logToStorage(`Redirecionando para: ${returnTo}`);
+
+      // Clear the return path and state
+      localStorage.removeItem('spotify_return_to');
+      localStorage.removeItem('spotify_auth_state');
+
+      // Check if we need to continue with sync
+      const syncPending = localStorage.getItem('spotify_sync_pending') === 'true';
+      if (syncPending) {
+        localStorage.removeItem('spotify_sync_pending');
+        // Add a small delay to ensure tokens are properly saved
+        setTimeout(() => {
+          navigate(returnTo, { 
+            state: { shouldSync: true },
+            replace: true // Use replace to prevent back button from triggering sync again
+          });
+        }, 100);
+      } else {
+        navigate(returnTo, { replace: true });
+      }
+    } catch (error) {
+      console.error('Error handling Spotify callback:', error);
+      logToStorage(`Erro no callback do Spotify: ${error.message}`, 'error');
+      setError(`Erro no processamento: ${error.message}`);
+      
+      // If we get an invalid_grant error, redirect to home and show error
+      if (error.message.includes('invalid_grant')) {
+        setTimeout(() => {
+          navigate('/', { 
+            state: { error: 'Erro na autenticação do Spotify. Por favor, tente novamente.' },
+            replace: true
+          });
+        }, 3000);
+      } else {
+        setTimeout(() => navigate('/', { replace: true }), 3000);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Show loading state while processing callback
+  return (
+    <Center h="100vh" bg="#0A0A0A">
+      <VStack spacing={6} p={8} bg="#181818" borderRadius="xl" boxShadow="xl">
+        {error ? (
+          <>
+            <Text color="red.400" fontSize="lg" fontWeight="600" textAlign="center">
+              Erro na autenticação
+            </Text>
+            <Text color="white" fontSize="md" textAlign="center">
+              {error}
+            </Text>
+            <Text color="gray.400" fontSize="sm" textAlign="center">
+              Redirecionando em 3 segundos...
+            </Text>
+          </>
+        ) : (
+          <>
+            <Spinner size="xl" color="brand.400" />
+            <Text color="white" fontSize="lg" fontWeight="600">
+              Processando autenticação do Spotify...
+            </Text>
+            {isProcessing && (
+              <Text color="gray.400" fontSize="sm" textAlign="center">
+                Aguarde, isso pode levar alguns segundos
+              </Text>
+            )}
+          </>
+        )}
+      </VStack>
+    </Center>
+  );
+}
+
+// Debug component to check localStorage state
+function DebugSpotify() {
+  const [debugInfo, setDebugInfo] = useState({});
+
+  useEffect(() => {
+    const info = {
+      spotify_auth_state: localStorage.getItem('spotify_auth_state'),
+      spotify_access_token: localStorage.getItem('spotify_access_token') ? 'present' : 'absent',
+      spotify_refresh_token: localStorage.getItem('spotify_refresh_token') ? 'present' : 'absent',
+      spotify_token_expires_at: localStorage.getItem('spotify_token_expires_at'),
+      spotify_return_to: localStorage.getItem('spotify_return_to'),
+      spotify_sync_pending: localStorage.getItem('spotify_sync_pending'),
+      spotifyLogs: JSON.parse(localStorage.getItem('spotifyLogs') || '[]').slice(-5), // Last 5 logs
+    };
+    setDebugInfo(info);
+  }, []);
+
+  const clearAll = () => {
+    localStorage.removeItem('spotify_auth_state');
+    localStorage.removeItem('spotify_access_token');
+    localStorage.removeItem('spotify_refresh_token');
+    localStorage.removeItem('spotify_token_expires_at');
+    localStorage.removeItem('spotify_return_to');
+    localStorage.removeItem('spotify_sync_pending');
+    localStorage.removeItem('spotifyLogs');
+    window.location.reload();
+  };
+
+  return (
+    <Center h="100vh" bg="#0A0A0A">
+      <VStack spacing={6} p={8} bg="#181818" borderRadius="xl" boxShadow="xl" maxW="600px" w="full">
+        <Heading color="brand.400" size="lg">Debug Spotify Auth</Heading>
+        
+        <VStack spacing={4} w="full" align="stretch">
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>State:</Text>
+            <Text color="gray.300" fontFamily="mono" fontSize="sm">
+              {debugInfo.spotify_auth_state || 'null'}
+            </Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Access Token:</Text>
+            <Text color="gray.300">{debugInfo.spotify_access_token}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Refresh Token:</Text>
+            <Text color="gray.300">{debugInfo.spotify_refresh_token}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Expires At:</Text>
+            <Text color="gray.300" fontFamily="mono" fontSize="sm">
+              {debugInfo.spotify_token_expires_at ? 
+                new Date(parseInt(debugInfo.spotify_token_expires_at)).toLocaleString() : 
+                'null'
+              }
+            </Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Return To:</Text>
+            <Text color="gray.300">{debugInfo.spotify_return_to || 'null'}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Sync Pending:</Text>
+            <Text color="gray.300">{debugInfo.spotify_sync_pending || 'null'}</Text>
+          </Box>
+          
+          <Box p={4} bg="#282828" borderRadius="md">
+            <Text color="white" fontWeight="600" mb={2}>Recent Logs:</Text>
+            <VStack align="stretch" spacing={1}>
+              {debugInfo.spotifyLogs?.map((log, index) => (
+                <Text key={index} color="gray.300" fontSize="xs" fontFamily="mono">
+                  {new Date(log.timestamp).toLocaleTimeString()}: {log.message}
+                </Text>
+              ))}
+            </VStack>
+          </Box>
+        </VStack>
+        
+        <HStack spacing={4}>
+          <Button colorScheme="red" onClick={clearAll}>
+            Clear All Data
+          </Button>
+          <Button colorScheme="brand" onClick={() => window.location.href = '/'}>
+            Go Home
+          </Button>
+        </HStack>
+      </VStack>
+    </Center>
+  );
+}
 
 function App() {
   const [countdown, setCountdown] = useState({ days: '00', hours: '00', minutes: '00', seconds: '00' })
@@ -201,7 +451,7 @@ function App() {
   }
 
   const handleAddMusic = (track) => {
-    if (suggestedMusic.length >= 3) {
+    if (suggestedMusic.length >= 10) {
       setMusicLimitError(true)
       return
     }
@@ -430,53 +680,6 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
         console.error('Error sending organizer notifications:', error);
       });
 
-      let generalInstructions = ` envie a seguinte mensagem: 'Olá! Aqui é o assistente virtual do Patrick! Obrigada por confirmar a sua presença no aniversário da Carol! Ela vai ficar muito feliz'
-      A seguir um contexto SOMENTE para o caso de o usuário interagir na convers:
-
-A festa de 40 anos da Carol será no dia **28/06/2025**, às **16h**, no **Feliz da Vila Bistrô (Rua Johnson, 345 - União)**. O espaço estará **fechado exclusivamente para o evento**.
-
-Após a confirmação, envie uma mensagem de agradecimento em nome do **Patrick (namorado da Carol)**, algo simples como:  
-**"Obrigado por confirmar! Vai ser ótimo ter você com a gente nessa comemoração especial 💛"**
-
-Se o convidado quiser mais detalhes, compartilhe:
-
-- 📸 Convite: [Ver convite](https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/calazans/niver2025-6d628c96-85e1-40c5-8da0-84ff4341b025.jpeg)  
-- 🍽️ Cardápio de comidas: [Cardápio Comida.pdf](https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/calazans/Cardapiocomida-82d3ac9a-4b1a-49a5-bef8-97539c56930c.pdf)  
-- 🍷 Cardápio de vinhos: [Cardápio Vinhos.pdf](https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/calazans/Cardapiovinhos-5cfc65b3-ec36-42e9-bc03-064eb1dae2fa.pdf)
-
-A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para responder dúvidas sobre:
-- Horário, local, dress code
-- O que será servido (comida, bebida, opções sem álcool)
-- Detalhes do evento.
-`
-
-      // generalInstructions = generalInstructions.replace(/\s+/g, ' ');
-
-      // Send notifications asynchronously
-      // fetch(
-      //   `${EXTERNAL_API_BASE_URL}/api/externalAPIs/public/externalNotificationAI`,
-      //   {
-      //     method: 'POST',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //       Authorization: `Bearer ${TOLKY_API_TOKEN}`,
-      //     },
-      //     body: JSON.stringify({
-      //       data: [
-      //         {
-      //           phone: phone.replace(/\D/g, ''),
-      //           userName: names[0],
-      //           eventType: 'aniversario',
-      //           eventDate: EVENT_DATE.toISOString(),
-      //         },
-      //       ],
-      //       generalInstructions,
-      //     }),
-      //   }
-      // ).catch(error => {
-      //   console.error('Error sending user notification:', error);
-      // });
-
       onSuccessOpen();
       setNames(['']);
       setPhone('');
@@ -514,45 +717,39 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
         <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
           Faltam
         </Heading>
-        <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
+        <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={{ base: 4, md: 8 }} borderRadius="xl" backdropFilter="blur(8px)">
           <VStack key="days">
-            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+            <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
               {countdown.days}
             </Text>
-            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+            <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
               Dias
             </Text>
           </VStack>
-          <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-            :
-          </Text>
+          <Text key="days-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
           <VStack key="hours">
-            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+            <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
               {countdown.hours}
             </Text>
-            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+            <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
               Horas
             </Text>
           </VStack>
-          <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-            :
-          </Text>
+          <Text key="hours-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
           <VStack key="minutes">
-            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+            <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
               {countdown.minutes}
             </Text>
-            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+            <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
               Minutos
             </Text>
           </VStack>
-          <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-            :
-          </Text>
+          <Text key="minutes-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
           <VStack key="seconds">
-            <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+            <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
               {countdown.seconds}
             </Text>
-            <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+            <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
               Segundos
             </Text>
           </VStack>
@@ -572,56 +769,8 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
 
       {/* Details Section */}
       {showDetails && (
-        <Box
-          bg="rgba(167, 139, 250, 0.1)"
-          p={8}
-          borderRadius="xl"
-          w="full"
-          backdropFilter="blur(8px)"
-        >
-          <VStack align="start" spacing={6}>
-            <Box>
-              <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
-              <Text color="white" fontSize="lg">
-                Carol vai comemorar seus 40 anos no dia 28 de junho, às 16 horas
-              </Text>
-            </Box>
-
-            <Box>
-              <Heading color="brand.400" size="lg" mb={4}>Lugar</Heading>
-              <Text color="white" fontSize="lg">
-                A festa vai acontecer no <Text as="span" fontWeight="700">Feliz da Vila Bistrô</Text>, localizado na Rua Johnson, 345, no bairro União. Será uma celebração especial com cartela individual. O local estará reservado exclusivamente para a festa.
-              </Text>
-              <Box mt={4} borderRadius="xl" overflow="hidden">
-                <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3752.0454327392695!2d-43.925100889195285!3d-19.88030338141984!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa69ba92dfb95e7%3A0x6f8899ec69063e27!2sFeliz%20da%20Vila%20Bistro!5e0!3m2!1spt-BR!2sbr!4v1750010651457!5m2!1spt-BR!2sbr" 
-                  width="100%" 
-                  height="450" 
-                  style={{ border: 0 }} 
-                  allowFullScreen="" 
-                  loading="lazy" 
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </Box>
-            </Box>
-
-            <Box>
-              <Heading color="brand.400" size="lg" mb={4}>A banda</Heading>
-              <Text color="white" fontSize="lg" mb={4}>
-                Vamos ter uma banda de samba muito animada chamada Oiaki composta por amigos da Carol!
-              </Text>
-              <Box borderRadius="xl" overflow="hidden" mb={4}>
-                <iframe 
-                  src="https://www.instagram.com/p/Cd8dinvOagN/embed"
-                  className="snapwidget-widget"
-                  allowTransparency="true"
-                  frameBorder="0"
-                  scrolling="no"
-                  style={{ border: 'none', overflow: 'hidden', width: '100%', height: '600px' }}
-                />
-              </Box>
-            </Box>
-          </VStack>
+        <Box w="full" px={{ base: 0, md: 4 }}>
+          <MoreInfo />
         </Box>
       )}
 
@@ -661,19 +810,27 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
         </VStack>
       </Box>
     </VStack>
-  )
+  );
 
   return (
     <ChakraProvider theme={theme}>
       <Router>
         <Routes>
+          {/* Rota de callback deve vir primeiro */}
+          <Route path="/callback" element={<SpotifyCallback />} />
+          
+          {/* Debug route */}
+          <Route path="/debug" element={<DebugSpotify />} />
+          
+          {/* Rotas principais */}
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/" element={
-            <Container maxW="container.md" py={8}>
+            <Container maxW={{ base: "100%", md: "container.md" }} px={{ base: 2, md: 4 }} py={{ base: 4, md: 8 }}>
               {!showFullForm ? (
                 renderInitialEmailScreen()
               ) : (
-                <VStack spacing={8} bg="#0A0A0A" p={8} borderRadius="xl" boxShadow="xl">
+                <VStack spacing={{ base: 4, md: 8 }} bg="#0A0A0A" p={{ base: 2, md: 8 }} borderRadius="xl" boxShadow="xl">
                   {/* Profile Section */}
                   <VStack spacing={4}>
                     <Image
@@ -698,45 +855,39 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                     <Heading color="brand.400" size="lg" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
                       Faltam
                     </Heading>
-                    <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={8} borderRadius="xl" backdropFilter="blur(8px)">
+                    <HStack spacing={4} bg="rgba(167, 139, 250, 0.1)" p={{ base: 4, md: 8 }} borderRadius="xl" backdropFilter="blur(8px)">
                       <VStack key="days">
-                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                        <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
                           {countdown.days}
                         </Text>
-                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                        <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
                           Dias
                         </Text>
                       </VStack>
-                      <Text key="days-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                        :
-                      </Text>
+                      <Text key="days-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
                       <VStack key="hours">
-                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                        <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
                           {countdown.hours}
                         </Text>
-                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                        <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
                           Horas
                         </Text>
                       </VStack>
-                      <Text key="hours-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                        :
-                      </Text>
+                      <Text key="hours-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
                       <VStack key="minutes">
-                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                        <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
                           {countdown.minutes}
                         </Text>
-                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                        <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
                           Minutos
                         </Text>
                       </VStack>
-                      <Text key="minutes-separator" fontSize="5xl" color="brand.400" opacity={0.5}>
-                        :
-                      </Text>
+                      <Text key="minutes-separator" fontSize={{ base: "3xl", md: "5xl" }} color="brand.400" opacity={0.5}>:</Text>
                       <VStack key="seconds">
-                        <Text fontSize="5xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
+                        <Text fontSize={{ base: "3xl", md: "5xl" }} fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
                           {countdown.seconds}
                         </Text>
-                        <Text fontSize="md" color="white" textTransform="uppercase" fontWeight="600">
+                        <Text fontSize={{ base: "sm", md: "md" }} color="white" textTransform="uppercase" fontWeight="600">
                           Segundos
                         </Text>
                       </VStack>
@@ -752,63 +903,15 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                     </Button>
 
                     {showDetails && (
-                      <Box
-                        bg="rgba(167, 139, 250, 0.1)"
-                        p={8}
-                        borderRadius="xl"
-                        w="full"
-                        backdropFilter="blur(8px)"
-                      >
-                        <VStack align="start" spacing={6}>
-                          <Box>
-                            <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
-                            <Text color="white" fontSize="lg">
-                              Carol vai comemorar seus 40 anos no dia 28 de junho, às 16 horas
-                            </Text>
-                          </Box>
-
-                          <Box>
-                            <Heading color="brand.400" size="lg" mb={4}>Lugar</Heading>
-                            <Text color="white" fontSize="lg">
-                              A festa vai acontecer no <Text as="span" fontWeight="700">Feliz da Vila Bistrô</Text>, localizado na Rua Johnson, 345, no bairro União. Será uma celebração especial com cartela individual. O local estará reservado exclusivamente para a festa.
-                            </Text>
-                            <Box mt={4} borderRadius="xl" overflow="hidden">
-                              <iframe 
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3752.0454327392695!2d-43.925100889195285!3d-19.88030338141984!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa69ba92dfb95e7%3A0x6f8899ec69063e27!2sFeliz%20da%20Vila%20Bistro!5e0!3m2!1spt-BR!2sbr!4v1750010651457!5m2!1spt-BR!2sbr" 
-                                width="100%" 
-                                height="450" 
-                                style={{ border: 0 }} 
-                                allowFullScreen="" 
-                                loading="lazy" 
-                                referrerPolicy="no-referrer-when-downgrade"
-                              />
-                            </Box>
-                          </Box>
-
-                          <Box>
-                            <Heading color="brand.400" size="lg" mb={4}>A banda</Heading>
-                            <Text color="white" fontSize="lg" mb={4}>
-                              Vamos ter uma banda de samba muito animada chamada Oiaki composta por amigos da Carol!
-                            </Text>
-                            <Box borderRadius="xl" overflow="hidden" mb={4}>
-                              <iframe 
-                                src="https://www.instagram.com/p/Cd8dinvOagN/embed"
-                                className="snapwidget-widget"
-                                allowTransparency="true"
-                                frameBorder="0"
-                                scrolling="no"
-                                style={{ border: 'none', overflow: 'hidden', width: '100%', height: '600px' }}
-                              />
-                            </Box>
-                          </Box>
-                        </VStack>
+                      <Box w="full" px={{ base: 0, md: 4 }}>
+                        <MoreInfo />
                       </Box>
                     )}
                   </VStack>
 
                   {/* Form Section */}
                   <Box as="form" w="full" onSubmit={handleSubmit}>
-                    <VStack spacing={6} align="stretch">
+                    <VStack spacing={{ base: 4, md: 6 }} align="stretch">
                       {names.map((name, index) => (
                         <HStack key={index}>
                           <FormControl isRequired>
@@ -902,7 +1005,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                           <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
                         </HStack>
                         <Text mb={2} fontSize="lg" color="white">
-                          Sugira até 3 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
+                          Sugira até 10 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
                         </Text>
                         <InputGroup>
                           <InputLeftElement pointerEvents="none">
@@ -914,7 +1017,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                             placeholder="Busque uma música..."
                             bg="#181818"
                             color="white"
-                            isDisabled={suggestedMusic.length >= 3}
+                            isDisabled={suggestedMusic.length >= 10}
                           />
                           <InputRightElement>
                             {isSearching && <Spinner size="sm" color="brand.500" />}
@@ -922,7 +1025,7 @@ A IA deve manter o tom carinhoso, acolhedor e informal. Esteja preparada para re
                         </InputGroup>
                         {musicLimitError && (
                           <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
-                            Limite de 3 músicas atingido.
+                            Limite de 10 músicas atingido.
                           </Text>
                         )}
                         {searchResults.length > 0 && (
