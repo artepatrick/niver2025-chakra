@@ -44,7 +44,7 @@ import MoreInfo from './components/MoreInfo'
 // Import Georama font
 import '@fontsource/georama'
 
-const EVENT_DATE = new Date('2025-06-28T16:00:00')
+const EVENT_DATE = new Date('2025-08-30T16:00:00')
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
   : 'https://omnicast-backend.fly.dev')
