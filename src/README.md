@@ -9,8 +9,8 @@ Vamos construir as APIs de uma aplicação de aniversário.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1A202C">
-    <meta name="description" content="Confirme sua presença para o aniversário de Ana Carolina Calazans">
-    <title>Ana Carolina Calazans - Confirmação de Presença</title>
+    <meta name="description" content="Confirme sua presença para o aniversário de Maria Clara">
+    <title>Maria Clara - Confirmação de Presença</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,10 +21,10 @@ Vamos construir as APIs de uma aplicação de aniversário.
         <div class="content">
             <div class="profile-section">
                 <img src="https://tolky.to/_next/image?url=https%3A%2F%2Fi.postimg.cc%2FT2tQppZB%2Fcarol-comprimida.jpg&w=1920&q=75" 
-                     alt="Ana Carolina Calazans" 
+                     alt="Maria Clara" 
                      class="profile-image"
                      loading="lazy">
-                <h1>Ana Carolina Calazans</h1>
+                <h1>Maria Clara</h1>
                 <p class="subtitle">Confirme sua presença</p>
             </div>
 

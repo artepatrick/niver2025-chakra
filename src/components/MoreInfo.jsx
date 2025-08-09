@@ -18,7 +18,7 @@ const MoreInfo = () => {
         <Box>
           <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
           <Text color="white" fontSize="lg">
-            Carol vai comemorar -- seus 40 anos no dia 28 de junho, às 16 horas
+            Maria Clara vai comemorar seus 70 anos no dia 30 de Setembro, às 16 horas
           </Text>
         </Box>
 
@@ -43,7 +43,7 @@ const MoreInfo = () => {
         <Box>
           <Heading color="brand.400" size="lg" mb={4}>A banda</Heading>
           <Text color="white" fontSize="lg" mb={4}>
-            Vamos ter uma banda de samba muito animada chamada Oiaki composta por amigos da Carol!
+            Vamos ter uma banda de samba muito animada chamada Oiaki!
           </Text>
           <Box borderRadius="xl" overflow="hidden" mb={4}>
             <iframe 

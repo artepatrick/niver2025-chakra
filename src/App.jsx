@@ -697,7 +697,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
       <VStack spacing={4}>
         <Image
           src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
-          alt="Ana Carolina Calazans"
+          alt="Maria Clara"
           borderRadius="full"
           boxSize="200px"
           objectFit="cover"
@@ -705,7 +705,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
           borderColor="brand.400"
         />
         <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-          40 anos da Carol
+          70 anos da Maria Clara
         </Heading>
         <Text fontSize="2xl" color="white" fontWeight="500">
           Confirme sua presença e dos acompanhantes!
@@ -835,7 +835,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
                   <VStack spacing={4}>
                     <Image
                       src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
-                      alt="Ana Carolina Calazans"
+                      alt="Maria Clara"
                       borderRadius="full"
                       boxSize="200px"
                       objectFit="cover"
@@ -843,7 +843,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
                       borderColor="brand.400"
                     />
                     <Heading color="brand.400" size="2xl" fontWeight="700" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">
-                      Ana Carolina Calazans
+                      Maria Clara
                     </Heading>
                     <Text fontSize="2xl" color="white" fontWeight="500">
                       Confirme sua presença
