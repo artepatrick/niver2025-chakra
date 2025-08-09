@@ -48,13 +48,6 @@ const EVENT_DATE = new Date('2025-08-30T16:00:00')
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
   : 'https://omnicast-backend.fly.dev')
-const EXTERNAL_API_BASE_URL = 'https://api.tolky.to'
-const TOLKY_API_TOKEN = 'S30LusdLYOEjsFe2DNa4CVI9ny4Yi8N2YAX7gw9Yapg'
-
-const ORGANIZERS = {
-  CAROL: '553199455764',
-  PATRICK: '5531991391722'
-}
 
 const theme = extendTheme({
   fonts: {
@@ -561,54 +554,28 @@ function App() {
     });
   };
 
-  const notifyOrganizers = async (formData) => {
-    const message = `🎉 Novo cadastro/atualização no evento!
-
-👥 Convidado(s):
-${formData.names.map(name => `- ${name}`).join('\n')}
-
-📱 Contato:
-- Email: ${formData.email}
-- Telefone: ${formData.phone}
-
-🎵 Músicas sugeridas: ${formData.musicSuggestions.length}
-${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => `- ${music.song_title} (${music.artist})`).join('\n') : '- Nenhuma música sugerida'}
-
-⏰ Data do evento: ${new Date(EVENT_DATE).toLocaleDateString('pt-BR')} às ${new Date(EVENT_DATE).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-
-    const notificationResponse = await fetch(
-      `${EXTERNAL_API_BASE_URL}/api/externalAPIs/public/externalNotificationAI`,
-      {
+  const notifyOrganizersBackend = async (formData) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/niver2025/notifyOrganizers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${TOLKY_API_TOKEN}`,
         },
         body: JSON.stringify({
-          data: [
-            {
-              phone: ORGANIZERS.CAROL,
-              userName: 'Carol',
-              eventType: 'aniversario',
-              eventDate: EVENT_DATE.toISOString(),
-              customMessage: message
-            },
-            {
-              phone: ORGANIZERS.PATRICK,
-              userName: 'Patrick',
-              eventType: 'aniversario',
-              eventDate: EVENT_DATE.toISOString(),
-              customMessage: message
-            }
-          ],
-          generalInstructions: 'Envie esta mensagem exatamente como está, sem adicionar ou remover nada.',
+          email: formData.email,
+          phone: formData.phone,
+          names: formData.names,
+          musicSuggestions: formData.musicSuggestions,
+          eventDate: EVENT_DATE.toISOString(),
+          host_id: getHostId(),
         }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data?.data?.success) {
+        console.warn('Organizer notification failed:', data)
       }
-    )
-
-    const notificationData = await notificationResponse.json()
-    if (notificationData.code !== 200 || notificationData.data.summary.failedItems > 0) {
-      console.warn('Some organizer notifications failed to send:', notificationData)
+    } catch (error) {
+      console.error('Error calling notifyOrganizers backend route:', error)
     }
   }
 
@@ -675,10 +642,8 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
         throw new Error(submitData.message || 'Falha ao enviar formulário');
       }
 
-      // Notify organizers about the new registration asynchronously
-      notifyOrganizers(formData).catch(error => {
-        console.error('Error sending organizer notifications:', error);
-      });
+      // Notify organizers via backend asynchronously
+      notifyOrganizersBackend(formData)
 
       onSuccessOpen();
       setNames(['']);
