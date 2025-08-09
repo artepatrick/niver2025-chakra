@@ -52,3 +52,46 @@ export function saveSpotifyAuth(data) {
   }
   localStorage.setItem("spotify_token_expires_at", expiresAt.toString());
 }
+
+/**
+ * Resolve the current host_id to be used by API calls
+ * Priority: URL (?host_id= / ?host=) > localStorage > env (VITE_HOST_ID) > default UUID
+ * Validates as UUID v4-like string
+ * @returns {string}
+ */
+export function getHostId() {
+  try {
+    const DEFAULT_HOST_ID = "92ed1aba-2738-478a-bf24-a25dbc951b78";
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    // Try URL params
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("host_id") || params.get("host");
+      if (fromUrl && uuidRegex.test(fromUrl)) {
+        localStorage.setItem("host_id", fromUrl);
+        return fromUrl;
+      }
+    }
+
+    // Try localStorage
+    const fromStorage =
+      typeof window !== "undefined" ? localStorage.getItem("host_id") : null;
+    if (fromStorage && uuidRegex.test(fromStorage)) {
+      return fromStorage;
+    }
+
+    // Try env
+    const fromEnv = import.meta?.env?.VITE_HOST_ID;
+    if (fromEnv && uuidRegex.test(fromEnv)) {
+      return fromEnv;
+    }
+
+    // Fallback default
+    return DEFAULT_HOST_ID;
+  } catch (e) {
+    console.warn("Failed to resolve host_id, using default.", e);
+    return "92ed1aba-2738-478a-bf24-a25dbc951b78";
+  }
+}

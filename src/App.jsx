@@ -38,7 +38,7 @@ import { FaSpotify } from 'react-icons/fa'
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import Dashboard from './pages/dashboard'
 import { searchSpotify, handleCallback as handleSpotifyCallback } from './spotifyServer'
-import { logToStorage } from './utils'
+import { logToStorage, getHostId } from './utils'
 import MoreInfo from './components/MoreInfo'
 
 // Import Georama font
@@ -488,7 +488,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: initialEmail }),
+        body: JSON.stringify({ email: initialEmail, host_id: getHostId() }),
       })
 
       const data = await response.json()
@@ -661,7 +661,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, host_id: getHostId() }),
       });
 
       const submitData = await submitResponse.json();

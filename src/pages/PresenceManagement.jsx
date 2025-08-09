@@ -28,6 +28,7 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { FaSpotify } from 'react-icons/fa';
+import { getHostId } from '../utils';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -70,7 +71,7 @@ const PresenceManagement = () => {
       setLoading(true);
       console.log('Buscando confirmações...');
       
-      const response = await fetch(`${API_BASE_URL}/api/niver2025/getAllConfirmations`);
+      const response = await fetch(`${API_BASE_URL}/api/niver2025/getAllConfirmations?host_id=${encodeURIComponent(getHostId())}`);
       const data = await response.json();
       
       console.log('Resposta do servidor:', JSON.stringify(data, null, 2));
@@ -126,7 +127,7 @@ const PresenceManagement = () => {
       const response = await fetch(`${API_BASE_URL}/api/niver2025/update-status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, host_id: getHostId() }),
       });
 
       const data = await response.json();

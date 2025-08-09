@@ -50,7 +50,7 @@ import { MdMusicNote } from 'react-icons/md';
 import { FaSpotify } from 'react-icons/fa';
 import { syncPlaylist } from '../spotifyPlaylistSync';
 import { getAuthUrl } from '../spotifyServer';
-import { logToStorage } from '../utils';
+import { logToStorage, getHostId } from '../utils';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
@@ -95,7 +95,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         console.log('Buscando confirmações...');
-        const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
+        const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations?host_id=${encodeURIComponent(getHostId())}`);
         if (!response.ok) {
           throw new Error(`Erro ao buscar confirmações: ${response.status}`);
         }
@@ -227,7 +227,7 @@ const Dashboard = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, host_id: getHostId() }),
       });
       
       console.log('Status da resposta:', response.status);
@@ -318,7 +318,7 @@ const Dashboard = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, host_id: getHostId() }),
       });
       
       console.log('Status da resposta:', response.status);
@@ -453,7 +453,7 @@ const Dashboard = () => {
   const fetchConfirmations = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations`);
+      const response = await fetch(`${BASE_URL}/api/niver2025/getAllConfirmations?host_id=${encodeURIComponent(getHostId())}`);
       const data = await response.json();
       
       if (data.code === 200) {
