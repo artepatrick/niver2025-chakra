@@ -715,7 +715,7 @@ const Dashboard = () => {
               <Box mb={8} borderRadius="xl" overflow="hidden">
                 <iframe 
                   style={{ borderRadius: "12px" }} 
-                  src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                  src="https://open.spotify.com/embed/playlist/3f37DjVvBiBWqs65lf1ZcU?utm_source=generator" 
                   width="100%" 
                   height="352" 
                   frameBorder="0" 

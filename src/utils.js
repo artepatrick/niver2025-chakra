@@ -62,7 +62,7 @@ export function saveSpotifyAuth(data) {
 export function getHostId() {
   try {
     const DEFAULT_HOST_ID =
-      process.env.NIVER2025_DEFAULT_HOST_ID ||
+      import.meta?.env?.VITE_DEFAULT_HOST_ID ||
       "2f9623b8-b9f5-404a-b106-ab96aef4400b";
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

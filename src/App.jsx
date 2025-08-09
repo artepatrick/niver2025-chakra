@@ -696,7 +696,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
       {/* Profile Section */}
       <VStack spacing={4}>
         <Image
-          src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
+          src="/caia01.jpeg"
           alt="Maria Clara"
           borderRadius="full"
           boxSize="200px"
@@ -834,7 +834,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
                   {/* Profile Section */}
                   <VStack spacing={4}>
                     <Image
-                      src="https://xedmqngqukfopguebmtl.supabase.co/storage/v1/object/public/hostBucket/patrick/6b7f909d-22ad-4f72-8838-0f968f7e3cb2-3f9d5934-330a-413d-a430-0033cbdb32ce.png"
+                      src="/caia01.jpeg"
                       alt="Maria Clara"
                       borderRadius="full"
                       boxSize="200px"
@@ -1098,7 +1098,7 @@ ${formData.musicSuggestions.length > 0 ? formData.musicSuggestions.map(music => 
                       <Box mt={4} borderRadius="xl" overflow="hidden">
                         <iframe 
                           style={{ borderRadius: "12px" }} 
-                          src="https://open.spotify.com/embed/playlist/3885YwVwdWiLefIxZfmu3d?utm_source=generator" 
+                          src="https://open.spotify.com/embed/playlist/3f37DjVvBiBWqs65lf1ZcU?utm_source=generator" 
                           width="100%" 
                           height="352" 
                           frameBorder="0" 
