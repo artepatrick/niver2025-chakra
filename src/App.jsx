@@ -964,71 +964,48 @@ function App() {
                         )}
                       </FormControl>
 
-                      <FormControl>
-                        <HStack spacing={2} mb={2}>
-                          <FaSpotify size={24} color="#1DB954" />
-                          <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
-                        </HStack>
-                        <Text mb={2} fontSize="lg" color="white">
-                          Sugira até 10 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
-                        </Text>
-                        <InputGroup>
-                          <InputLeftElement pointerEvents="none">
-                            <SearchIcon color="white" boxSize="5" />
-                          </InputLeftElement>
-                          <Input
-                            value={musicSearch}
-                            onChange={handleMusicSearch}
-                            placeholder="Busque uma música..."
-                            bg="#181818"
-                            color="white"
-                            isDisabled={suggestedMusic.length >= 10}
-                          />
-                          <InputRightElement>
-                            {isSearching && <Spinner size="sm" color="brand.500" />}
-                          </InputRightElement>
-                        </InputGroup>
-                        {musicLimitError && (
-                          <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
-                            Limite de 10 músicas atingido.
+                      {/* Music Suggestions - hidden */}
+                      {false && (
+                        <FormControl>
+                          <HStack spacing={2} mb={2}>
+                            <FaSpotify size={24} color="#1DB954" />
+                            <FormLabel fontSize="2xl" fontWeight="700" color="brand.400" textShadow="0 0 20px rgba(167, 139, 250, 0.3)">Sugerir Músicas</FormLabel>
+                          </HStack>
+                          <Text mb={2} fontSize="lg" color="white">
+                            Sugira até 10 músicas para adicionar à playlist que vai tocar enquanto a banda não começa!
                           </Text>
-                        )}
-                        {searchResults.length > 0 && (
-                          <Box mt={2} maxH="200px" overflowY="auto" bg="#181818" borderRadius="xl">
-                            {searchResults.map((track) => (
-                              <HStack
-                                key={track.spotify_id}
-                                p={3}
-                                _hover={{ bg: '#282828' }}
-                                cursor="pointer"
-                                onClick={() => handleAddMusic(track)}
-                                spacing={3}
-                              >
-                                <Image
-                                  src={track.album_image_url}
-                                  alt={`${track.song_title} album cover`}
-                                  boxSize="50px"
-                                  borderRadius="md"
-                                  objectFit="cover"
-                                />
-                                <VStack align="start" spacing={0} flex={1}>
-                                  <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
-                                    {track.song_title}
-                                  </Text>
-                                  <Text color="gray.300" fontSize="md" noOfLines={1}>
-                                    {track.artist}
-                                  </Text>
-                                </VStack>
-                              </HStack>
-                            ))}
-                          </Box>
-                        )}
-                        {suggestedMusic.length > 0 && (
-                          <Box mt={4}>
-                            <Text mb={2} fontSize="lg" color="white" fontWeight="600">Músicas Sugeridas:</Text>
-                            <VStack align="stretch" spacing={2}>
-                              {suggestedMusic.map((track) => (
-                                <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
+                          <InputGroup>
+                            <InputLeftElement pointerEvents="none">
+                              <SearchIcon color="white" boxSize="5" />
+                            </InputLeftElement>
+                            <Input
+                              value={musicSearch}
+                              onChange={handleMusicSearch}
+                              placeholder="Busque uma música..."
+                              bg="#181818"
+                              color="white"
+                              isDisabled={suggestedMusic.length >= 10}
+                            />
+                            <InputRightElement>
+                              {isSearching && <Spinner size="sm" color="brand.500" />}
+                            </InputRightElement>
+                          </InputGroup>
+                          {musicLimitError && (
+                            <Text color="red.400" fontSize="lg" mt={1} fontWeight="500">
+                              Limite de 10 músicas atingido.
+                            </Text>
+                          )}
+                          {searchResults.length > 0 && (
+                            <Box mt={2} maxH="200px" overflowY="auto" bg="#181818" borderRadius="xl">
+                              {searchResults.map((track) => (
+                                <HStack
+                                  key={track.spotify_id}
+                                  p={3}
+                                  _hover={{ bg: '#282828' }}
+                                  cursor="pointer"
+                                  onClick={() => handleAddMusic(track)}
+                                  spacing={3}
+                                >
                                   <Image
                                     src={track.album_image_url}
                                     alt={`${track.song_title} album cover`}
@@ -1044,34 +1021,48 @@ function App() {
                                       {track.artist}
                                     </Text>
                                   </VStack>
-                                  <IconButton
-                                    icon={<DeleteIcon />}
-                                    size="lg"
-                                    variant="ghost"
-                                    colorScheme="red"
-                                    onClick={() => handleRemoveMusic(track.spotify_id)}
-                                    aria-label="Remover música"
-                                  />
                                 </HStack>
                               ))}
-                            </VStack>
-                          </Box>
-                        )}
-                      </FormControl>
+                            </Box>
+                          )}
+                          {suggestedMusic.length > 0 && (
+                            <Box mt={4}>
+                              <Text mb={2} fontSize="lg" color="white" fontWeight="600">Músicas Sugeridas:</Text>
+                              <VStack align="stretch" spacing={2}>
+                                {suggestedMusic.map((track) => (
+                                  <HStack key={track.spotify_id} bg="#181818" p={3} borderRadius="xl" spacing={3} _hover={{ bg: '#282828' }}>
+                                    <Image
+                                      src={track.album_image_url}
+                                      alt={`${track.song_title} album cover`}
+                                      boxSize="50px"
+                                      borderRadius="md"
+                                      objectFit="cover"
+                                    />
+                                    <VStack align="start" spacing={0} flex={1}>
+                                      <Text color="white" fontWeight="600" fontSize="lg" noOfLines={1}>
+                                        {track.song_title}
+                                      </Text>
+                                      <Text color="gray.300" fontSize="md" noOfLines={1}>
+                                        {track.artist}
+                                      </Text>
+                                    </VStack>
+                                    <IconButton
+                                      icon={<DeleteIcon />}
+                                      size="lg"
+                                      variant="ghost"
+                                      colorScheme="red"
+                                      onClick={() => handleRemoveMusic(track.spotify_id)}
+                                      aria-label="Remover música"
+                                    />
+                                  </HStack>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
+                        </FormControl>
+                      )}
 
-                      {/* Spotify Playlist Embed */}
-                      <Box mt={4} borderRadius="xl" overflow="hidden">
-                        <iframe 
-                          style={{ borderRadius: "12px" }} 
-                          src="https://open.spotify.com/embed/playlist/3f37DjVvBiBWqs65lf1ZcU?utm_source=generator" 
-                          width="100%" 
-                          height="352" 
-                          frameBorder="0" 
-                          allowFullScreen="" 
-                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                          loading="lazy"
-                        />
-                      </Box>
+                      {/* Spotify iframe removed as requested */}
 
                       <Button
                         type="submit"
