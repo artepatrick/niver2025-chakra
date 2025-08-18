@@ -18,7 +18,7 @@ const MoreInfo = () => {
         <Box>
           <Heading color="brand.400" size="lg" mb={4}>A festa</Heading>
           <Text color="white" fontSize="lg">
-            Maria Clara vai comemorar seus 70 anos no dia 30 de Setembro, às 16 horas
+            Maria Clara vai comemorar seus 70 anos no dia 30 de Agosto, às 16 horas
           </Text>
         </Box>
 
